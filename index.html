@@ -330,6 +330,9 @@ body.kb .mnav{display:none}
 body.is-m .toast{bottom:calc(78px + env(safe-area-inset-bottom));max-width:calc(100% - 32px)}
 body.is-m.kb .toast{bottom:16px}
 /* 云同步登录框 */
+.m-sync{display:flex;justify-content:flex-end;margin:-4px 0 -6px}
+.m-sync .status{margin-left:0;font-size:12.5px;padding:6px 8px}
+.cs-box .cs-who{font-size:14px;word-break:break-all}
 .cs-mask{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
 .cs-box{background:var(--card);color:var(--ink);border-radius:12px;padding:20px;width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px;box-shadow:0 10px 40px rgba(0,0,0,.2)}
 .cs-box h2{margin:0;font-size:18px}
@@ -565,7 +568,7 @@ function csHTML(){
   if(!CS.user)return '<div class="bk-st" data-s="off"><i></i><span>云同步未登录：现在数据只存在这台设备上。登录后手机和电脑自动同步。</span></div>'+
     '<div class="bk-row"><button class="main" data-act="cs-login">登录云同步</button></div>';
   return '<div class="bk-st" data-s="'+(CS.failed?'err':CS.busy||CS.dirty?'busy':'ok')+'"><i></i><span>云同步已开启，账号 <b>'+esc(CS.user.email||'')+'</b></span></div>'+
-    '<div class="bk-row"><button data-act="sync">立即同步</button><button data-act="cs-out">退出登录</button></div>';
+    '<div class="bk-row"><button data-act="cs-now">立即同步</button><button data-act="cs-out">退出登录</button></div>';
 }
 function csPaint(){var el=document.getElementById('cs');if(el)el.innerHTML=csHTML();paintStatus()}
 function csSchedule(ms){
@@ -662,6 +665,24 @@ function csOpen(){
     });
   });
   setTimeout(function(){var i=document.getElementById('cs-email');if(i)i.focus()},50);
+}
+function csAccount(){
+  if(!CS.user||document.getElementById('cs-mask'))return;
+  var d=document.createElement('div'); d.className='cs-mask'; d.id='cs-mask';
+  var s=statusInfo();
+  d.innerHTML='<div class="cs-box"><h2>云同步</h2>'+
+    '<div class="cs-who">账号：<b>'+esc(CS.user.email||'')+'</b></div>'+
+    '<p>状态：'+esc(s[1])+'。改动会自动上传；在另一台设备打开或切回来时，会自动取最新数据。</p>'+
+    '<div class="cs-btns"><button class="main" data-m="now">立即同步</button><button data-m="out">退出登录</button></div>'+
+    '<button type="button" class="cs-skip" data-m="skip">关闭</button></div>';
+  document.body.appendChild(d);
+  d.addEventListener('click',function(ev){
+    var b=ev.target.closest('button');
+    if(ev.target===d||(b&&b.dataset.m==='skip')){csClose();return}
+    if(!b)return;
+    if(b.dataset.m==='now'){csClose();csPull(true);toast('正在同步…');render()}
+    if(b.dataset.m==='out'){csClose();csSignOut()}
+  });
 }
 function csSignedIn(u){
   var same=CS.user&&CS.user.id===u.id;
@@ -1078,6 +1099,7 @@ function mobileHTML(){
   if(!(ui.nEdit&&ui.noteId&&findNote(ui.noteId)))ui.nEdit=false;
   var h='<div class="wrap m" data-m="'+m+'"'+(m==='notes'&&ui.nEdit?' data-ne="1"':'')+'>';
   if(m==='today'){
+    if(CS.on)h+='<div class="m-sync">'+statusHTML()+'</div>';
     h+='<header class="mdate"><button class="md-b" data-act="prev" aria-label="前一天">‹</button>'+
        '<div class="md-c"><div class="md-d">'+(d.getMonth()+1)+'月'+d.getDate()+'日<small>周'+WD[d.getDay()]+'</small></div>'+
        '<div class="md-r">'+relLabel(v)+(v!==t?' · <button class="md-today" data-act="today">回到今天</button>':'')+'</div></div>'+
@@ -1338,7 +1360,8 @@ root.addEventListener('click',function(ev){
     render(); window.scrollTo(0,0);
   }
   else if(act==='n-back'){ui.nEdit=false;render();window.scrollTo(0,0)}
-  else if(act==='sync'){if(CS.on){if(!CS.user)csOpen();else csPull(true)}else if(dirty&&artifact)flush(true)}
+  else if(act==='sync'){if(CS.on){if(!CS.user)csOpen();else csAccount()}else if(dirty&&artifact)flush(true)}
+  else if(act==='cs-now'){csPull(true)}
   else if(act==='cs-login'){csOpen()}
   else if(act==='cs-out'){csSignOut()}
   else if(act==='toggle'){
