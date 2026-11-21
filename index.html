@@ -329,8 +329,19 @@ body.kb .mnav{display:none}
 .m-back button{color:var(--red);font-size:15px;padding:8px 2px}
 body.is-m .toast{bottom:calc(78px + env(safe-area-inset-bottom));max-width:calc(100% - 32px)}
 body.is-m.kb .toast{bottom:16px}
+/* 云同步登录框 */
+.cs-mask{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+.cs-box{background:var(--card);color:var(--ink);border-radius:12px;padding:20px;width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px;box-shadow:0 10px 40px rgba(0,0,0,.2)}
+.cs-box h2{margin:0;font-size:18px}
+.cs-box p{margin:0;font-size:13px;color:var(--muted);line-height:1.55}
+.cs-box input{font-size:16px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink)}
+.cs-box .cs-err{color:var(--red);font-size:13px;min-height:1em}
+.cs-box .cs-btns{display:flex;gap:8px}
+.cs-box .cs-btns button{flex:1;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:14px}
+.cs-box .cs-btns button.main{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.cs-box .cs-skip{font-size:13px;color:var(--muted);padding:4px;align-self:center}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
-</style></head><body><div id="root"></div><script id="state" type="application/json">null</script><script id="app">
+</style></head><body><div id="root"></div><script src="supabase.js"></script><script id="state" type="application/json">null</script><script id="app">
 (function(){
 'use strict';
 var KEY='daily-tasks-v1', UIKEY='daily-tasks-ui';
@@ -414,7 +425,7 @@ function readUI(){try{return JSON.parse(sessionStorage.getItem(UIKEY))||{}}catch
 function commit(){
   state.updatedAt=Date.now(); prune();
   try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}
-  dirty=true; failed=false; schedule(2500); bkSchedule(); render();
+  dirty=true; failed=false; schedule(2500); bkSchedule(); csSchedule(); render();
 }
 function schedule(ms){clearTimeout(timer);timer=setTimeout(flush,ms)}
 function typing(){
@@ -440,6 +451,14 @@ function flush(force){
   }).then(function(){busy=false;paintStatus()});
 }
 function statusInfo(){
+  if(CS.on){
+    if(!CS.ready)return ['wait','连接中…'];
+    if(!CS.user)return ['bad','未登录，点这里登录同步'];
+    if(CS.busy)return ['busy','同步中…'];
+    if(CS.failed)return ['bad','同步失败，点这里重试'];
+    if(CS.dirty)return ['wait','有改动待同步'];
+    return ['ok','已同步'];
+  }
   if(artifact===undefined)return ['wait','连接中…'];
   if(artifact===null)return ['wait','保存在这个浏览器里'];
   if(readonly)return ['bad','只读，改动不会保存'];
@@ -533,7 +552,137 @@ function toolsHTML(){
     '<button data-act="export-json" title="完整备份，可以用“导入备份”恢复">导出备份</button>'+
     '<button data-act="import">导入备份</button></div>'+
     '<input type="file" id="import-file" accept=".json,application/json" hidden>'+
+    (CS.on?'<div class="bk" id="cs">'+csHTML()+'</div>':'')+
     '<div class="bk" id="bk">'+bkHTML()+'</div></div>';
+}
+
+/* ---------- 云同步：网页版（GitHub Pages）登录后，数据存到 Supabase，手机电脑共用一份 ---------- */
+var SB_URL='https://gtausgquhfwelfqbvqgq.supabase.co', SB_KEY='sb_publishable_bnNoak9MyN5Y8-5G6ZZ0lg_IhmkIrPM';
+var CS={on:!!(window.supabase&&window.supabase.createClient)&&!(window.claude&&window.claude.use)&&location.protocol!=='file:',
+  sb:null,user:null,ready:false,busy:false,dirty:false,failed:false,again:false,timer:0,base:-1,pulling:false};
+function csHTML(){
+  if(!CS.ready)return '<div class="bk-st" data-s="busy"><i></i><span>云同步连接中…</span></div>';
+  if(!CS.user)return '<div class="bk-st" data-s="off"><i></i><span>云同步未登录：现在数据只存在这台设备上。登录后手机和电脑自动同步。</span></div>'+
+    '<div class="bk-row"><button class="main" data-act="cs-login">登录云同步</button></div>';
+  return '<div class="bk-st" data-s="'+(CS.failed?'err':CS.busy||CS.dirty?'busy':'ok')+'"><i></i><span>云同步已开启，账号 <b>'+esc(CS.user.email||'')+'</b></span></div>'+
+    '<div class="bk-row"><button data-act="sync">立即同步</button><button data-act="cs-out">退出登录</button></div>';
+}
+function csPaint(){var el=document.getElementById('cs');if(el)el.innerHTML=csHTML();paintStatus()}
+function csSchedule(ms){
+  if(!CS.on||!CS.user)return;
+  CS.dirty=true; CS.failed=false; clearTimeout(CS.timer);
+  CS.timer=setTimeout(csPush,ms==null?2000:ms);
+}
+/* 把这台设备的数据存到云端 */
+function csPush(){
+  clearTimeout(CS.timer);
+  if(!CS.user||!CS.dirty)return;
+  if(CS.busy){CS.again=true;return}
+  CS.busy=true; CS.dirty=false; csPaint();
+  var at=state.updatedAt||Date.now();
+  CS.sb.from('boards').upsert({user_id:CS.user.id,data:state,updated_at:at}).then(function(r){
+    if(r.error)throw r.error;
+    CS.base=at;
+  }).catch(function(e){CS.dirty=true;CS.failed=true;console.warn('云同步失败',e)}).then(function(){
+    CS.busy=false; csPaint();
+    if(CS.again){CS.again=false;csPush()}
+  });
+}
+/* 从云端取最新的数据；云端更新就用云端的，本机更新就上传本机的 */
+function csPull(manual){
+  if(!CS.user||CS.pulling)return;
+  if(CS.dirty&&!manual){csPush();return}
+  CS.pulling=true; CS.busy=true; csPaint();
+  CS.sb.from('boards').select('data,updated_at').eq('user_id',CS.user.id).maybeSingle().then(function(r){
+    if(r.error)throw r.error;
+    var row=r.data, mine=state.updatedAt||0;
+    CS.busy=false; CS.failed=false;
+    if(row&&row.data&&row.data.v===1&&row.updated_at>mine){
+      var prev=JSON.stringify(state), first=CS.base<0, hadLocal=!state.sample&&mine>0;
+      state=row.data; delete state.sample; normPlans(state); normNotes(state);
+      if(!state.routines)state.routines=[]; if(!state.days)state.days={};
+      try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}
+      CS.base=row.updated_at; CS.dirty=false;
+      if(first&&hadLocal)toast('已换成云端的最新数据（本机旧数据可撤销恢复）',prev);
+      render();
+    }else if(!row||row.updated_at<mine){
+      CS.base=row?row.updated_at:0;
+      if(!state.sample){CS.dirty=true;csPush()}
+    }else CS.base=row.updated_at;
+  }).catch(function(e){CS.busy=false;CS.failed=true;console.warn('云同步读取失败',e)}).then(function(){CS.pulling=false;csPaint()});
+}
+function csSignOut(){
+  if(!CS.sb)return;
+  var go=function(){CS.sb.auth.signOut().then(function(){CS.user=null;CS.base=-1;CS.dirty=false;toast('已退出云同步，本机数据还在');render()})};
+  if(CS.dirty){csPush();setTimeout(go,1500)}else go();
+}
+function csMsg(e){
+  var m=String(e&&e.message||e||'');
+  if(/Invalid login credentials/i.test(m))return '邮箱或密码不对。第一次用请点“注册”。';
+  if(/already registered|already exists/i.test(m))return '这个邮箱已经注册过了，请直接点“登录”。';
+  if(/Password should be at least/i.test(m))return '密码至少要 6 位。';
+  if(/valid email|invalid format|Unable to validate email/i.test(m))return '邮箱格式不对，请检查一下。';
+  if(/Email not confirmed/i.test(m))return '这个邮箱还没确认：请去邮箱里点确认链接。';
+  if(/rate limit|too many/i.test(m))return '试得太频繁了，请过几分钟再试。';
+  if(/fetch|network/i.test(m))return '连不上服务器，请检查网络后再试。';
+  return '出错了：'+m;
+}
+function csClose(){var m=document.getElementById('cs-mask');if(m)m.remove()}
+function csOpen(){
+  if(!CS.sb||document.getElementById('cs-mask'))return;
+  var d=document.createElement('div'); d.className='cs-mask'; d.id='cs-mask';
+  d.innerHTML='<form class="cs-box" autocomplete="on"><h2>登录云同步</h2>'+
+    '<p>用同一个邮箱和密码，在电脑和手机上各登录一次，数据就会自动同步。第一次用请填好后点“注册”。</p>'+
+    '<input type="email" name="email" id="cs-email" placeholder="邮箱" autocomplete="username" required>'+
+    '<input type="password" name="password" id="cs-pw" placeholder="密码（至少 6 位）" autocomplete="current-password" minlength="6" required>'+
+    '<div class="cs-err" id="cs-err"></div>'+
+    '<div class="cs-btns"><button type="submit" class="main" data-m="in">登录</button><button type="submit" data-m="up">注册</button></div>'+
+    '<button type="button" class="cs-skip" data-m="skip">先不登录</button></form>';
+  document.body.appendChild(d);
+  var f=d.querySelector('form'), err=d.querySelector('#cs-err'), mode='in';
+  d.addEventListener('click',function(ev){
+    var b=ev.target.closest('button');
+    if(ev.target===d||(b&&b.dataset.m==='skip')){csClose();return}
+    if(b&&b.dataset.m)mode=b.dataset.m;
+  });
+  f.addEventListener('submit',function(ev){
+    ev.preventDefault();
+    var em=f.email.value.trim(), pw=f.password.value;
+    if(!em||pw.length<6){err.textContent='请填邮箱，密码至少 6 位。';return}
+    err.textContent=mode==='up'?'正在注册…':'正在登录…';
+    [].forEach.call(f.querySelectorAll('button'),function(x){x.disabled=true});
+    var p=mode==='up'?CS.sb.auth.signUp({email:em,password:pw}):CS.sb.auth.signInWithPassword({email:em,password:pw});
+    p.then(function(r){
+      if(r.error)throw r.error;
+      if(!r.data||!r.data.session){err.textContent='注册成功，但需要先去邮箱点确认链接，然后回来点“登录”。';return}
+      csClose(); csSignedIn(r.data.session.user);
+      toast(mode==='up'?'注册成功，云同步已开启':'登录成功，云同步已开启'); render();
+    }).catch(function(e){err.textContent=csMsg(e)}).then(function(){
+      [].forEach.call(f.querySelectorAll('button'),function(x){x.disabled=false});
+    });
+  });
+  setTimeout(function(){var i=document.getElementById('cs-email');if(i)i.focus()},50);
+}
+function csSignedIn(u){
+  var same=CS.user&&CS.user.id===u.id;
+  CS.user=u; if(!same){CS.base=-1;csPull(true)} csPaint();
+}
+function csInit(){
+  if(!CS.on)return;
+  try{CS.sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}})}
+  catch(e){CS.on=false;paintStatus();return}
+  CS.sb.auth.getSession().then(function(r){
+    var s=r&&r.data&&r.data.session;
+    CS.ready=true;
+    if(s)csSignedIn(s.user);
+    else{csPaint();var asked=false;try{asked=sessionStorage.getItem('cs-asked')}catch(e){}
+      if(!asked){try{sessionStorage.setItem('cs-asked','1')}catch(e){}csOpen()}}
+  },function(){CS.ready=true;csPaint()});
+  CS.sb.auth.onAuthStateChange(function(ev,s){
+    if(ev==='SIGNED_OUT'){CS.user=null;csPaint()}
+  });
+  setInterval(function(){if(!document.hidden&&CS.user&&!CS.dirty&&!CS.busy)csPull()},60000);
+  window.addEventListener('online',function(){if(CS.user)CS.dirty?csPush():csPull()});
 }
 
 /* ---------- 自动备份：写进你选的文件夹（Chrome / Edge） ---------- */
@@ -686,7 +835,7 @@ function autoGrow(el){el.style.height='auto';el.style.height=Math.max(360,el.scr
 function saveQuiet(){
   state.updatedAt=Date.now();
   try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}
-  dirty=true; failed=false; if(artifact)schedule(2500); bkSchedule();
+  dirty=true; failed=false; if(artifact)schedule(2500); bkSchedule(); csSchedule();
 }
 function noteRows(){
   var rows=[['分类','标题','内容','创建时间','更新时间']];
@@ -1189,7 +1338,9 @@ root.addEventListener('click',function(ev){
     render(); window.scrollTo(0,0);
   }
   else if(act==='n-back'){ui.nEdit=false;render();window.scrollTo(0,0)}
-  else if(act==='sync'){if(dirty&&artifact)flush(true)}
+  else if(act==='sync'){if(CS.on){if(!CS.user)csOpen();else csPull(true)}else if(dirty&&artifact)flush(true)}
+  else if(act==='cs-login'){csOpen()}
+  else if(act==='cs-out'){csSignOut()}
   else if(act==='toggle'){
     ui.focus=false;
     if(kind==='r'){var D=dayW(v);if(D.rdone[id])delete D.rdone[id];else D.rdone[id]=true}
@@ -1387,8 +1538,8 @@ root.addEventListener('keydown',function(ev){
   else if(ev.key==='Escape'){editing=null;render()}
 });
 document.addEventListener('visibilitychange',function(){
-  if(document.hidden){if(dirty&&artifact)flush(true);if(BK.dirty&&BK.status==='ok')bkWrite()}
-  else if(ui.day!==today()){if(ui.view===ui.day)ui.view=today();render()}
+  if(document.hidden){if(dirty&&artifact)flush(true);if(BK.dirty&&BK.status==='ok')bkWrite();if(CS.dirty)csPush()}
+  else{if(CS.user)csPull();if(ui.day!==today()){if(ui.view===ui.day)ui.view=today();render()}}
 });
 
 /* ---------- 启动 ---------- */
@@ -1405,8 +1556,8 @@ var hot=window.claude&&window.claude.hot;
 if(hot&&hot.snapshot)hot.snapshot(function(){return ui});
 if(hot&&hot.ready)hot.ready(start);else start((hot&&hot.data)||{});
 
-bkInit();
-window.addEventListener('pagehide',function(){if(BK.dirty&&BK.status==='ok')bkWrite()});
+bkInit(); csInit();
+window.addEventListener('pagehide',function(){if(BK.dirty&&BK.status==='ok')bkWrite();if(CS.dirty)csPush()});
 if(window.claude&&window.claude.use){
   window.claude.use('artifact').then(function(a){artifact=a||null;paintStatus()},function(){artifact=null;paintStatus()});
 }else{artifact=null;paintStatus()}
