@@ -239,10 +239,11 @@ button,input,select{font:inherit;color:inherit}
       </div>
       <button class="btn" id="rateBtn" type="button">积分规则</button>
     </section>
+    <h2 style="margin-bottom:-10px"><button class="foldh" type="button" id="clistBtn" aria-expanded="true"><span class="chev">▶</span>客户名称 <span class="muted" id="clistN" style="font-size:13px;font-family:var(--body);font-weight:400"></span></button></h2>
     <section class="list" id="clist"></section>
     <section style="display:grid;gap:10px">
-      <h2><button class="foldh" type="button" id="slogBtn" aria-expanded="false"><span class="chev">▶</span>消费记录 <span class="muted" id="slogN" style="font-size:13px;font-family:var(--body);font-weight:400"></span></button></h2>
-      <div class="log sales" id="slogBox" hidden><ul id="slog"></ul></div>
+      <h2><button class="foldh" type="button" id="slogBtn" aria-expanded="true"><span class="chev">▶</span>消费记录 <span class="muted" id="slogN" style="font-size:13px;font-family:var(--body);font-weight:400"></span></button></h2>
+      <div class="log sales" id="slogBox"><ul id="slog"></ul></div>
     </section>
   </div>
 </div>
@@ -511,6 +512,7 @@ function renderCust(){
     <span class="c-sum">¥${fmt(c.sum)}</span><span class="c-pf">${pfHtml(c.profit)}${c.pend?` <span class="pend">${c.pend}笔待填</span>`:""}</span><span class="c-n">${c.n} 次</span><span class="c-q">${fmt(c.qty)}</span>
     <span class="c-pts"><span class="pts">${fmt(c.pts)}</span> 分</span><span class="c-last">${ymd(c.last)} ${hm(c.last)}</span></div>`+(open?foldHtml(c.name):"")}).join("");
   const sl=q?S.sales.filter(x=>x.customer.toLowerCase().includes(q)||String(x.products||"").toLowerCase().includes(q)):S.sales;
+  $("clistN").textContent=`（${cs.length} 位，点击${$("clist").hidden?"展开":"收起"}）`;
   $("slogN").textContent=`（${sl.length} 条，点击${$("slogBox").hidden?"展开":"收起"}）`;
   $("slog").innerHTML=sl.length?sl.slice(0,100).map(saleLi).join(""):`<li><span class="muted" style="grid-column:1/-1">还没有消费记录。</span></li>`;
   $("rateBtn").textContent=`积分规则：每 1 元 = ${fmt(S.rate)} 分`;
@@ -697,8 +699,10 @@ document.addEventListener("click",e=>{
 });
 $("cq").oninput=e=>{S.cq=e.target.value;renderCust()};
 $("rateBtn").onclick=rateSheet;
-$("slogBtn").onclick=()=>{const b=$("slogBox"),o=b.hidden;b.hidden=!o;$("slogBtn").setAttribute("aria-expanded",o);try{localStorage.setItem("tea-shop-inventory-v1-slog",o?"1":"")}catch(e){}renderCust()};
-try{if(localStorage.getItem("tea-shop-inventory-v1-slog")){$("slogBox").hidden=false;$("slogBtn").setAttribute("aria-expanded","true")}}catch(e){}
+$("slogBtn").onclick=()=>{const b=$("slogBox"),o=b.hidden;b.hidden=!o;$("slogBtn").setAttribute("aria-expanded",o);try{localStorage.setItem("tea-shop-inventory-v1-slog2",o?"1":"0")}catch(e){}renderCust()};
+$("clistBtn").onclick=()=>{const b=$("clist"),o=b.hidden;b.hidden=!o;$("clistBtn").setAttribute("aria-expanded",o);try{localStorage.setItem("tea-shop-inventory-v1-clist",o?"1":"0")}catch(e){}renderCust()};
+try{if(localStorage.getItem("tea-shop-inventory-v1-slog2")==="0"){$("slogBox").hidden=true;$("slogBtn").setAttribute("aria-expanded","false")}
+  if(localStorage.getItem("tea-shop-inventory-v1-clist")==="0"){$("clist").hidden=true;$("clistBtn").setAttribute("aria-expanded","false")}}catch(e){}
 
 /* ---------- data (saved in this browser) ---------- */
 const KEY="tea-shop-inventory-v1";
