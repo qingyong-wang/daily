@@ -149,6 +149,14 @@ button,input,select{font:inherit;color:inherit}
 @media (max-width:620px){.sales li{grid-template-columns:minmax(0,1fr) auto auto auto auto;column-gap:8px}}
 .pline{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:8px;align-items:center;font-size:14px}
 .pline input{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px;color:var(--ink);font-size:15px;min-width:0;width:100%}
+/* 客户折叠 */
+.crow.fold{cursor:pointer}.crow.fold:hover{background:var(--sunk)}
+.chev{display:inline-block;width:1.4em;font-size:.7em;vertical-align:.1em;color:var(--muted);transition:transform .15s}
+.crow[aria-expanded="true"] .chev{transform:rotate(90deg)}
+.cfold{background:var(--sunk);border-top:1px solid var(--line);padding:10px 16px 14px;display:grid;gap:10px}
+.cfold .log{border-radius:8px}
+.foldh{border:0;background:transparent;padding:0;font:inherit;cursor:pointer;display:inline-flex;align-items:baseline;gap:4px}
+.foldh[aria-expanded="true"] .chev{transform:rotate(90deg)}
 /* 云同步 */
 .sync{display:inline-flex;align-items:center;gap:6px}
 .sync i{width:8px;height:8px;border-radius:50%;background:var(--muted)}
@@ -232,8 +240,8 @@ button,input,select{font:inherit;color:inherit}
     </section>
     <section class="list" id="clist"></section>
     <section style="display:grid;gap:10px">
-      <h2>消费记录</h2>
-      <div class="log sales"><ul id="slog"></ul></div>
+      <h2><button class="foldh" type="button" id="slogBtn" aria-expanded="false"><span class="chev">▶</span>消费记录 <span class="muted" id="slogN" style="font-size:13px;font-family:var(--body);font-weight:400"></span></button></h2>
+      <div class="log sales" id="slogBox" hidden><ul id="slog"></ul></div>
     </section>
   </div>
 </div>
@@ -251,7 +259,7 @@ const isW=u=>u in WEIGHT;
 const conv=(q,from,to)=>isW(from)&&isW(to)?q*WEIGHT[from]/WEIGHT[to]:q;
 const unitChoices=u=>isW(u)?["克","斤","千克"]:[u];
 const unitSel=(id,u,sel)=>`<select id="${id}" class="usel" aria-label="单位">${unitChoices(u).map(x=>`<option ${x===(sel||u)?"selected":""}>${esc(x)}</option>`).join("")}</select>`;
-const S={cats:DEFAULT_CATS.slice(),sales:[],rate:1,tab:"inv",csort:"last",cq:"",items:[],moves:[],cat:"全部",q:"",loaded:false,db:null,canWrite:true,updatedAt:0};
+const S={cats:DEFAULT_CATS.slice(),sales:[],rate:1,tab:"inv",csort:"last",cq:"",items:[],moves:[],cat:"全部",q:"",loaded:false,db:null,canWrite:true,updatedAt:0,open:new Set()};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const num=v=>{const n=parseFloat(v);return Number.isFinite(n)?n:0};
@@ -495,14 +503,18 @@ function renderCust(){
   const L=$("clist");
   if(!cs.length){L.innerHTML=`<div class="empty"><p>还没有客户消费记录。客户买单后点“记一笔消费”，填上客户名称、买了什么、多少钱，积分会按规则自动算好。</p><button class="btn primary" type="button" data-sale="new">＋ 记一笔消费</button></div>`}
   else if(!vis.length){L.innerHTML=`<div class="empty"><p>没有找到匹配的客户。</p></div>`}
-  else L.innerHTML=`<div class="crow hdr"><span>客户名称</span><span>累计消费</span><span>累计利润</span><span>次数</span><span>消费数量</span><span>积分</span><span>最近消费</span></div>`+vis.map(c=>`<div class="crow">
-    <span class="cn" data-cust="${esc(c.name)}">${esc(c.name)}</span>
+  else L.innerHTML=`<div class="crow hdr"><span>客户名称</span><span>累计消费</span><span>累计利润</span><span>次数</span><span>消费数量</span><span>积分</span><span>最近消费</span></div>`+vis.map(c=>{const open=S.open.has(c.name);return `<div class="crow fold" data-fold="${esc(c.name)}" aria-expanded="${open}">
+    <span class="cn"><span class="chev">▶</span>${esc(c.name)}</span>
     <span class="c-sum">¥${fmt(c.sum)}</span><span class="c-pf">${pfHtml(c.profit)}${c.pend?` <span class="pend">${c.pend}笔待填</span>`:""}</span><span class="c-n">${c.n} 次</span><span class="c-q">${fmt(c.qty)}</span>
-    <span class="c-pts"><span class="pts">${fmt(c.pts)}</span> 分</span><span class="c-last">${ymd(c.last)} ${hm(c.last)}</span></div>`).join("");
+    <span class="c-pts"><span class="pts">${fmt(c.pts)}</span> 分</span><span class="c-last">${ymd(c.last)} ${hm(c.last)}</span></div>`+(open?foldHtml(c.name):"")}).join("");
   const sl=q?S.sales.filter(x=>x.customer.toLowerCase().includes(q)||String(x.products||"").toLowerCase().includes(q)):S.sales;
+  $("slogN").textContent=`（${sl.length} 条，点击${$("slogBox").hidden?"展开":"收起"}）`;
   $("slog").innerHTML=sl.length?sl.slice(0,100).map(saleLi).join(""):`<li><span class="muted" style="grid-column:1/-1">还没有消费记录。</span></li>`;
   $("rateBtn").textContent=`积分规则：每 1 元 = ${fmt(S.rate)} 分`;
 }
+function foldHtml(name){const list=S.sales.filter(x=>x.customer===name);
+  return `<div class="cfold"><div class="log sales"><ul>${list.slice(0,60).map(saleLi).join("")}</ul></div>
+  <div class="actions"><button class="btn" type="button" data-cust="${esc(name)}">客户详情 · 兑换积分</button><button class="btn" type="button" data-salefor="${esc(name)}">＋ 给 ${esc(name)} 再记一笔</button></div></div>`}
 function saleLi(x){const red=x.type==="redeem";
   return `<li><time>${ymd(x.ts).slice(5).replace("-","/")} ${hm(x.ts)}</time>
   <span><b class="cn" data-cust="${esc(x.customer)}" style="cursor:pointer">${esc(x.customer)}</b> · ${esc(x.type==="redeem"?x.products:linesText(saleLines(x)))}${x.note?` <span class="note">${esc(x.note)}</span>`:""}</span>
@@ -663,7 +675,7 @@ function exportSales(){
 function setTab(t){S.tab=t;$("p-inv").hidden=t!=="inv";$("p-cust").hidden=t!=="cust";
   $("t-inv").setAttribute("aria-selected",t==="inv");$("t-cust").setAttribute("aria-selected",t==="cust");
   $("addBtn").textContent=t==="cust"?"＋ 记一笔消费":"＋ 新增品项";$("exportBtn").textContent=t==="cust"?"导出消费记录":"导出表格";
-  $("sub").textContent=t==="cust"?"点客户名称看明细、兑换积分 · "+where():"点品名编辑 · 入库/出库/盘点自动记录 · "+where();
+  $("sub").textContent=t==="cust"?"点客户那一行展开消费记录 · "+where():"点品名编辑 · 入库/出库/盘点自动记录 · "+where();
   if(t==="cust")renderCust();try{localStorage.setItem(KEY+"-tab",t)}catch(e){}}
 document.addEventListener("click",e=>{
   const tb=e.target.closest("[data-tab]");if(tb){setTab(tb.dataset.tab);return}
@@ -678,9 +690,13 @@ document.addEventListener("click",e=>{
     persist();render();renderLog();renderCust();if(back)setTimeout(()=>toast(`已删除记录，${back} 项库存已加回`),0);
     if(!$("scrim").hidden&&x&&S.sales.some(s=>s.customer===x.customer))custSheet(x.customer);else if(!$("scrim").hidden)closeSheet();toast("已删除记录");return}
   const cn=e.target.closest("[data-cust]");if(cn){custSheet(cn.dataset.cust);return}
+  const sf=e.target.closest("[data-salefor]");if(sf){saleSheet(sf.dataset.salefor);return}
+  const fo=e.target.closest("[data-fold]");if(fo){const n=fo.dataset.fold;S.open.has(n)?S.open.delete(n):S.open.add(n);renderCust();return}
 });
 $("cq").oninput=e=>{S.cq=e.target.value;renderCust()};
 $("rateBtn").onclick=rateSheet;
+$("slogBtn").onclick=()=>{const b=$("slogBox"),o=b.hidden;b.hidden=!o;$("slogBtn").setAttribute("aria-expanded",o);try{localStorage.setItem("tea-shop-inventory-v1-slog",o?"1":"")}catch(e){}renderCust()};
+try{if(localStorage.getItem("tea-shop-inventory-v1-slog")){$("slogBox").hidden=false;$("slogBtn").setAttribute("aria-expanded","true")}}catch(e){}
 
 /* ---------- data (saved in this browser) ---------- */
 const KEY="tea-shop-inventory-v1";
@@ -711,7 +727,7 @@ function where(){return CS.on&&CS.user?"数据已云同步":"数据保存在本�
 function csInfo(){if(!CS.ready)return["busy","连接中…"];if(!CS.user)return["off","未登录"];if(CS.failed)return["bad","同步失败"];if(CS.busy||CS.dirty)return["busy","同步中…"];return["ok","已同步"]}
 function csPaint(){if(!CS.on)return;const b=$("csBtn"),i=csInfo();b.hidden=false;b.dataset.s=i[0];b.querySelector("span").textContent="云同步："+i[1];
   $("footNote").textContent=CS.user?"已登录云同步（"+CS.user.email+"）：改动会自动上传，手机和电脑看到的是同一份。仍建议每月点一次“备份”留底。":"现在数据只存在这台设备的浏览器里。点上面的“云同步”登录后，手机和电脑就能共用一份数据。";
-  if(S.loaded)$("sub").textContent=(S.tab==="cust"?"点客户名称看明细、兑换积分 · ":"点品名编辑 · 入库/出库/盘点自动记录 · ")+where()}
+  if(S.loaded)$("sub").textContent=(S.tab==="cust"?"点客户那一行展开消费记录 · ":"点品名编辑 · 入库/出库/盘点自动记录 · ")+where()}
 function csSchedule(){if(!CS.on||!CS.user)return;CS.dirty=true;CS.failed=false;clearTimeout(CS.timer);CS.timer=setTimeout(csPush,1500);csPaint()}
 function csPush(){clearTimeout(CS.timer);if(!CS.user||!CS.dirty)return;if(CS.busy){CS.again=true;return}
   CS.busy=true;CS.dirty=false;csPaint();
