@@ -139,6 +139,16 @@ button,input,select{font:inherit;color:inherit}
 .line .hint{grid-column:1/-1;font-size:12px;color:var(--muted);margin-top:-4px;font-variant-numeric:tabular-nums}
 .line .hint.warn{color:var(--warn)}
 @media (max-width:620px){.crow .c-q{font-size:12px;color:var(--muted)}}
+/* 利润 */
+@media (min-width:621px){.crow{grid-template-columns:minmax(0,1.4fr) minmax(0,.9fr) minmax(0,.9fr) minmax(0,.5fr) minmax(0,.7fr) minmax(0,.7fr) minmax(0,1.1fr)}}
+.pf{color:var(--ok);font-weight:500}.pf.neg{color:var(--bad)}.pend{color:var(--warn);font-size:12px}
+.stats.five{grid-template-columns:repeat(5,minmax(0,1fr))}
+@media (max-width:620px){.stats.five{grid-template-columns:repeat(2,minmax(0,1fr))}.stats.five .stat:last-child{grid-column:1/-1}
+  .crow .c-pf{grid-column:2;grid-row:2;text-align:right}.crow .cn{grid-row:1}.crow .c-n{grid-column:1;grid-row:2}.crow .c-q{grid-column:1;grid-row:3}.crow .c-pts{grid-row:3}.crow .c-last{grid-column:1/-1;grid-row:4}}
+.sales li{grid-template-columns:110px minmax(0,1fr) auto auto auto auto}
+@media (max-width:620px){.sales li{grid-template-columns:minmax(0,1fr) auto auto auto auto;column-gap:8px}}
+.pline{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:8px;align-items:center;font-size:14px}
+.pline input{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px;color:var(--ink);font-size:15px;min-width:0;width:100%}
 /* 云同步 */
 .sync{display:inline-flex;align-items:center;gap:6px}
 .sync i{width:8px;height:8px;border-radius:50%;background:var(--muted)}
@@ -202,9 +212,10 @@ button,input,select{font:inherit;color:inherit}
   </div>
 
   <div class="panel" id="p-cust" hidden>
-    <section class="stats" aria-label="客户概况">
+    <section class="stats five" aria-label="客户概况">
       <div class="stat"><b id="cCount">–</b><span>客户数</span></div>
       <div class="stat"><b id="cMonth">–</b><span>本月消费额（元）</span></div>
+      <div class="stat"><b id="cProfit">–</b><span id="cProfitL">本月利润（元）</span></div>
       <div class="stat"><b id="cOrders">–</b><span>本月消费笔数</span></div>
       <div class="stat"><b id="cPts">–</b><span>客户积分合计</span></div>
     </section>
@@ -213,6 +224,7 @@ button,input,select{font:inherit;color:inherit}
       <div class="chips" id="csort" role="group" aria-label="排序">
         <button class="chip" type="button" data-sort="last" aria-pressed="true">最近消费</button>
         <button class="chip" type="button" data-sort="sum" aria-pressed="false">累计金额</button>
+        <button class="chip" type="button" data-sort="profit" aria-pressed="false">利润</button>
         <button class="chip" type="button" data-sort="qty" aria-pressed="false">消费数量</button>
         <button class="chip" type="button" data-sort="pts" aria-pressed="false">积分</button>
       </div>
@@ -349,6 +361,7 @@ function moveSheet(it,type){
   <div class="seg" role="group" aria-label="操作">${[["in","入库"],["out","出库"],["chk","盘点"]].map(([k,l])=>`<button type="button" data-t="${k}" aria-pressed="${k===type}">${l}</button>`).join("")}</div>
   <form id="mvForm" style="display:grid;gap:12px">
     <div class="field"><span id="amtLbl">数量</span><div style="display:grid;grid-template-columns:minmax(0,1fr) 96px;gap:8px"><input id="m-amt" type="number" step="any" min="0" inputmode="decimal" required aria-labelledby="amtLbl">${unitSel("m-unit",it.unit)}</div></div>
+    <label class="field" id="m-costWrap">本次进货价（元/${esc(it.unit)}，选填，填了会更新这个品项的进价）<input id="m-cost" type="number" step="any" min="0" inputmode="decimal" value="${esc(it.cost??"")}"></label>
     <label class="field">备注（选填）<input id="m-note" placeholder="如：供应商到货、报损、做活动"></label>
     <p class="preview" id="pv"></p>
     <div class="actions" style="justify-content:flex-end"><button class="btn" type="button" id="cancel">取消</button><button class="btn primary" type="submit">确认</button></div>
@@ -356,7 +369,7 @@ function moveSheet(it,type){
   let t=type;
   const amt=()=>conv(num($("m-amt").value),$("m-unit").value,it.unit);
   const upd=()=>{const a=amt();const u=$("m-unit").value;
-    $("amtLbl").textContent=t==="chk"?"实际盘点数":t==="in"?"入库数量":"出库数量";
+    $("amtLbl").textContent=t==="chk"?"实际盘点数":t==="in"?"入库数量":"出库数量";$("m-costWrap").hidden=t!=="in";
     const after=t==="in"?cur+a:t==="out"?cur-a:a;
     $("pv").textContent=(u!==it.unit&&num($("m-amt").value)?`${fmt(num($("m-amt").value))} ${u} = ${fmt(a)} ${it.unit}。`:"")+`当前 ${fmt(cur)} ${it.unit} → 之后 ${fmt(after)} ${it.unit}`+(after<0?"（会变成负数，请检查）":"");
   };
@@ -367,9 +380,10 @@ function moveSheet(it,type){
     const a=amt();const u=$("m-unit").value;const now=S.items.find(i=>i.id===it.id);const base=num(now?now.qty:cur);
     const after=t==="in"?base+a:t==="out"?base-a:a;const delta=after-base;
     if(t!=="chk"&&!a)return;
-    const note=[u!==it.unit?`${fmt(num($("m-amt").value))}${u}`:"",$("m-note").value.trim()].filter(Boolean).join(" · ");
+    const cv=$("m-cost").value,newCost=t==="in"&&cv!==""?num(cv):null;
+    const note=[u!==it.unit?`${fmt(num($("m-amt").value))}${u}`:"",newCost!=null?`进价¥${fmt(newCost)}/${it.unit}`:"",$("m-note").value.trim()].filter(Boolean).join(" · ");
     try{
-      updItem(it.id,{qty:after,updated:Date.now()});
+      updItem(it.id,newCost!=null?{qty:after,cost:newCost,updated:Date.now()}:{qty:after,updated:Date.now()});
       addMove({itemId:it.id,itemName:it.name,unit:it.unit,type:t,delta,after,note,ts:Date.now()});
       closeSheet();toast(`${it.name}：现有 ${fmt(after)} ${it.unit}`)
     }catch(e){writeErr(e)}
@@ -451,11 +465,19 @@ function saleLines(x){if(Array.isArray(x.lines))return x.lines;
   return String(x.products||"").split(/[,，、]/).map(t=>t.trim()).filter(Boolean).map(n=>({name:n,qty:null}))}
 function linesText(lines){return lines.map(l=>l.qty==null?l.name:`${l.name}×${fmt(num(l.qty))}${l.unit||""}`).join("，")}
 const lineBase=l=>l.base!=null?num(l.base):num(l.qty);
+/* 利润 = 售价 − 进货成本 × 1.1 */
+const COSTX=1.1;
+const costOf=it=>it&&it.cost!==""&&it.cost!=null?num(it.cost):null;
+const lineCost=(l,it)=>{const c=costOf(it);return c==null?null:Math.round(lineBase(l)*c*100)/100};
+const hasPrice=x=>x.amount!=null&&x.amount!=="";
+function saleCost(x){let c=0,miss=0;for(const l of saleLines(x)){if(l.cost==null||l.cost==="")miss++;else c+=num(l.cost)}return{c,miss}}
+function saleProfit(x){if(x.type==="redeem"||!hasPrice(x))return null;const k=saleCost(x);return k.miss?null:Math.round((num(x.amount)-k.c*COSTX)*100)/100}
+const pfHtml=v=>v==null?"":`<span class="pf${v<0?" neg":""}">${v<0?"-":""}¥${fmt(Math.abs(v))}</span>`;
 function saleQty(x){return saleLines(x).reduce((a,l)=>a+(l.qty==null?0:num(l.qty)),0)}
 function customers(){
   const m=new Map();
-  for(const x of S.sales){const k=x.customer;let c=m.get(k);if(!c){c={name:k,sum:0,n:0,qty:0,pts:0,last:0,products:new Map()};m.set(k,c)}
-    c.pts+=num(x.points);if(x.type!=="redeem"){c.sum+=num(x.amount);c.n++;
+  for(const x of S.sales){const k=x.customer;let c=m.get(k);if(!c){c={name:k,sum:0,n:0,qty:0,pts:0,last:0,profit:0,pend:0,miss:0,products:new Map()};m.set(k,c)}
+    c.pts+=num(x.points);if(x.type!=="redeem"){c.sum+=num(x.amount);c.n++;const pf=saleProfit(x);if(!hasPrice(x))c.pend++;else if(pf==null)c.miss++;else c.profit+=pf;
       for(const l of saleLines(x)){const q=l.qty==null?1:(l.itemId?lineBase(l):num(l.qty));c.qty+=l.qty==null?0:num(l.qty);c.products.set(l.name,(c.products.get(l.name)||0)+q)}}
     c.last=Math.max(c.last,x.ts)}
   return [...m.values()];
@@ -464,16 +486,18 @@ function renderCust(){
   const cs=customers();const now=new Date();const mStart=new Date(now.getFullYear(),now.getMonth(),1).getTime();
   const month=S.sales.filter(x=>x.ts>=mStart&&x.type!=="redeem");
   $("cCount").textContent=cs.length;$("cMonth").textContent=fmt(month.reduce((a,x)=>a+num(x.amount),0));
-  $("cOrders").textContent=month.length;$("cPts").textContent=fmt(cs.reduce((a,c)=>a+c.pts,0));
+  $("cOrders").textContent=month.length;
+  {let pf=0,pend=0,miss=0;for(const x of month){const v=saleProfit(x);if(!hasPrice(x))pend++;else if(v==null)miss++;else pf+=v}
+   $("cProfit").textContent=fmt(pf);$("cProfitL").textContent="本月利润（元）"+(pend?` · ${pend} 笔待填售价`:"")+(miss?` · ${miss} 笔缺成本`:"")}$("cPts").textContent=fmt(cs.reduce((a,c)=>a+c.pts,0));
   const q=S.cq.trim().toLowerCase();
   const vis=cs.filter(c=>!q||c.name.toLowerCase().includes(q)||[...c.products.keys()].some(p=>p.toLowerCase().includes(q)))
-    .sort((a,b)=>S.csort==="sum"?b.sum-a.sum:S.csort==="qty"?b.qty-a.qty:S.csort==="pts"?b.pts-a.pts:b.last-a.last);
+    .sort((a,b)=>S.csort==="sum"?b.sum-a.sum:S.csort==="profit"?b.profit-a.profit:S.csort==="qty"?b.qty-a.qty:S.csort==="pts"?b.pts-a.pts:b.last-a.last);
   const L=$("clist");
   if(!cs.length){L.innerHTML=`<div class="empty"><p>还没有客户消费记录。客户买单后点“记一笔消费”，填上客户名称、买了什么、多少钱，积分会按规则自动算好。</p><button class="btn primary" type="button" data-sale="new">＋ 记一笔消费</button></div>`}
   else if(!vis.length){L.innerHTML=`<div class="empty"><p>没有找到匹配的客户。</p></div>`}
-  else L.innerHTML=`<div class="crow hdr"><span>客户名称</span><span>累计消费</span><span>次数</span><span>消费数量</span><span>积分</span><span>最近消费</span></div>`+vis.map(c=>`<div class="crow">
+  else L.innerHTML=`<div class="crow hdr"><span>客户名称</span><span>累计消费</span><span>累计利润</span><span>次数</span><span>消费数量</span><span>积分</span><span>最近消费</span></div>`+vis.map(c=>`<div class="crow">
     <span class="cn" data-cust="${esc(c.name)}">${esc(c.name)}</span>
-    <span class="c-sum">¥${fmt(c.sum)}</span><span class="c-n">${c.n} 次</span><span class="c-q">${fmt(c.qty)}</span>
+    <span class="c-sum">¥${fmt(c.sum)}</span><span class="c-pf">${pfHtml(c.profit)}${c.pend?` <span class="pend">${c.pend}笔待填</span>`:""}</span><span class="c-n">${c.n} 次</span><span class="c-q">${fmt(c.qty)}</span>
     <span class="c-pts"><span class="pts">${fmt(c.pts)}</span> 分</span><span class="c-last">${ymd(c.last)} ${hm(c.last)}</span></div>`).join("");
   const sl=q?S.sales.filter(x=>x.customer.toLowerCase().includes(q)||String(x.products||"").toLowerCase().includes(q)):S.sales;
   $("slog").innerHTML=sl.length?sl.slice(0,100).map(saleLi).join(""):`<li><span class="muted" style="grid-column:1/-1">还没有消费记录。</span></li>`;
@@ -482,7 +506,9 @@ function renderCust(){
 function saleLi(x){const red=x.type==="redeem";
   return `<li><time>${ymd(x.ts).slice(5).replace("-","/")} ${hm(x.ts)}</time>
   <span><b class="cn" data-cust="${esc(x.customer)}" style="cursor:pointer">${esc(x.customer)}</b> · ${esc(x.type==="redeem"?x.products:linesText(saleLines(x)))}${x.note?` <span class="note">${esc(x.note)}</span>`:""}</span>
-  <span class="amt">${red?`<span class="d out">${fmt(num(x.points))} 分</span>`:`¥${fmt(num(x.amount))} <span class="pts" style="font-weight:400">+${fmt(num(x.points))}分</span>`}</span>
+  <span class="amt">${red?`<span class="d out">${fmt(num(x.points))} 分</span>`:!hasPrice(x)?`<span class="pend">待填售价</span>`:`¥${fmt(num(x.amount))} <span class="pts" style="font-weight:400">+${fmt(num(x.points))}分</span>`}</span>
+  <span class="amt">${red?"":hasPrice(x)?(saleProfit(x)==null?`<span class="pend">缺成本</span>`:"利 "+pfHtml(saleProfit(x))):""}</span>
+  ${red?`<span></span>`:`<button class="x" type="button" data-price="${x.id}" style="color:var(--accent)">${hasPrice(x)?"改价":"填售价"}</button>`}
   <button class="x" type="button" data-delsale="${x.id}" title="删除这条记录">删除</button></li>`}
 function sortSales(){S.sales.sort((a,b)=>b.ts-a.ts)}
 function saveSales(){persist();renderCust()}
@@ -500,12 +526,13 @@ function saleSheet(name){
     <datalist id="dl-prods">${prods.map(n=>`<option value="${esc(n)}">`).join("")}</datalist>
     <button class="btn" type="button" id="addLine" style="justify-self:start">＋ 再加一样</button>
     <div class="grid2">
-      <label class="field">消费金额（元）<input id="s-amt" type="number" step="0.01" min="0" inputmode="decimal" required></label>
+      <label class="field">售价（元，可以先空着，出单后再填）<input id="s-amt" type="number" step="0.01" min="0" inputmode="decimal" placeholder="以后再填"></label>
       <label class="field">获得积分<input id="s-pts" type="number" step="any" inputmode="decimal"></label>
     </div>
     <label class="field">消费时间<input id="s-time" type="datetime-local" value="${toLocalInput(Date.now())}" required></label>
     <label class="field">备注（选填）<input id="s-note" placeholder="如：外卖、少冰、会员日"></label>
     <p class="preview" id="s-pv"></p>
+    <p class="preview" id="s-pf" style="margin-top:-8px"></p>
     <div class="actions" style="justify-content:flex-end"><button class="btn" type="button" id="cancel">取消</button><button class="btn primary" type="submit">保存</button></div>
   </form>`);
   let n=0;
@@ -514,7 +541,7 @@ function saleSheet(name){
     if(!nm){h.textContent="";h.className="hint";return}
     if(!it){h.textContent="不在库存里，只记录不扣库存";h.className="hint";return}
     const u=row.querySelector(".lu").value;const b=conv(q,u,it.unit);const after=num(it.qty)-b;h.className="hint"+(after<0?" warn":"");
-    h.textContent=(u!==it.unit&&q?`${fmt(q)}${u} = ${fmt(b)}${it.unit}。`:"")+`库存 ${fmt(num(it.qty))} ${it.unit} → 扣后 ${fmt(after)} ${it.unit}`+(after<0?"（库存不够）":"");};
+    h.textContent=(u!==it.unit&&q?`${fmt(q)}${u} = ${fmt(b)}${it.unit}。`:"")+`库存 ${fmt(num(it.qty))} ${it.unit} → 扣后 ${fmt(after)} ${it.unit}`+(after<0?"（库存不够）":"")+(costOf(it)!=null&&q?` · 成本 ¥${fmt(b*costOf(it))}`:" · 没填进价");pf();};
   const FREE=["","杯","份","斤","克","两","包","盒","罐","饼","袋"];
   const syncUnit=(row,it)=>{const sel=row.querySelector(".lu");const want=it?unitChoices(it.unit):FREE;const key=want.join("|");
     if(sel.dataset.k===key)return;const keep=sel.value;sel.dataset.k=key;
@@ -527,19 +554,22 @@ function saleSheet(name){
     $("lines").appendChild(r);return r};
   addRow();$("addLine").onclick=()=>addRow().querySelector(".ln").focus();
   if(name)setTimeout(()=>$("ln1").focus(),40);
+  const pf=()=>{let c=0,miss=0;for(const r of $("lines").children){const nm=r.querySelector(".ln").value.trim();const q=num(r.querySelector(".lq").value);if(!nm||!q)continue;
+      const it=S.items.find(i=>i.name===nm);if(costOf(it)==null){miss++;continue}c+=conv(q,r.querySelector(".lu").value,it.unit)*costOf(it)}
+    const a=$("s-amt").value;$("s-pf").textContent=`成本合计 ¥${fmt(c)}`+(miss?`（有 ${miss} 样没有进价）`:"")+(a===""?" · 售价填了以后自动算利润":` · 利润 ¥${fmt(num(a)-c*COSTX)}（售价 − 成本×${COSTX}）`)};
   let touched=false;
   const pv=()=>{const nm=$("s-name").value.trim();const c=customers().find(c=>c.name===nm);
     $("s-pv").textContent=c?`${nm}：已消费 ${c.n} 次，累计 ¥${fmt(c.sum)}，现有 ${fmt(c.pts)} 分`:(nm?"新客户，保存后自动建档":"")};
-  $("s-amt").oninput=()=>{if(!touched)$("s-pts").value=Math.floor(num($("s-amt").value)*S.rate)};
+  $("s-amt").oninput=()=>{if(!touched)$("s-pts").value=$("s-amt").value===""?"":Math.floor(num($("s-amt").value)*S.rate);pf()};
   $("s-pts").oninput=()=>touched=true;
   $("s-name").oninput=pv;pv();
   $("cancel").onclick=closeSheet;
   $("saleForm").onsubmit=ev=>{ev.preventDefault();
     const lines=[...$("lines").children].map(r=>{const nm=r.querySelector(".ln").value.trim();const q=num(r.querySelector(".lq").value);const it=S.items.find(i=>i.name===nm);const u=r.querySelector(".lu").value;
-      return nm&&q>0?{name:nm,qty:q,unit:u,itemId:it?it.id:null,base:it?conv(q,u,it.unit):null}:null}).filter(Boolean);
+      if(!(nm&&q>0))return null;const l={name:nm,qty:q,unit:u,itemId:it?it.id:null,base:it?conv(q,u,it.unit):null};l.cost=it?lineCost(l,it):null;return l}).filter(Boolean);
     if(!lines.length){toast("请至少填一样产品和数量");return}
     const ts=new Date($("s-time").value).getTime()||Date.now();
-    const amt=num($("s-amt").value);const pts=$("s-pts").value===""?Math.floor(amt*S.rate):num($("s-pts").value);
+    const amt=$("s-amt").value===""?null:num($("s-amt").value);const pts=$("s-pts").value===""?Math.floor(num(amt)*S.rate):num($("s-pts").value);
     const rec={id:uid(),type:"sale",customer:$("s-name").value.trim(),lines,products:linesText(lines),amount:amt,points:pts,note:$("s-note").value.trim(),ts};
     if(!rec.customer)return;
     try{
@@ -548,9 +578,37 @@ function saleSheet(name){
         const b=lineBase(l);const after=num(it.qty)-b;it.qty=after;it.updated=Date.now();cut++;
         S.moves.unshift({id:uid(),itemId:it.id,itemName:it.name,unit:it.unit,type:"out",delta:-b,after,note:"销售："+rec.customer+(l.unit!==it.unit?`（${fmt(l.qty)}${l.unit}）`:""),saleId:rec.id,ts:Date.now()})}
       S.sales.push(rec);sortSales();persist();render();renderLog();renderCust();closeSheet();
-      toast(`已记录：${rec.customer} ¥${fmt(amt)}，+${fmt(pts)} 分`+(cut?`，已扣 ${cut} 项库存`:""))
+      toast(amt==null?`已记录：${rec.customer}，售价待填`+(cut?`，已扣 ${cut} 项库存`:""):`已记录：${rec.customer} ¥${fmt(amt)}，利润 ¥${fmt(num(saleProfit(rec)))}，+${fmt(pts)} 分`+(cut?`，已扣 ${cut} 项库存`:""))
     }catch(e){writeErr(e)}
   };
+}
+function priceSheet(id,back){
+  const x=S.sales.find(s=>s.id===id);if(!x)return;const lines=saleLines(x);
+  openSheet(`<h2>${hasPrice(x)?"改售价":"填售价"} · ${esc(x.customer)}</h2>
+  <p class="preview" style="margin:0">${ymd(x.ts)} ${hm(x.ts)}</p>
+  <form id="pForm" style="display:grid;gap:12px">
+    <div class="field">每样产品的成本（元，按进价自动算好，可以改）</div>
+    ${lines.map((l,i)=>{const it=l.itemId&&S.items.find(t=>t.id===l.itemId)||S.items.find(t=>t.name===l.name);const c=l.cost!=null&&l.cost!==""?l.cost:(it&&l.qty!=null?lineCost(l.itemId?l:{...l,base:conv(num(l.qty),l.unit,it.unit)},it):"");
+      return `<label class="pline"><span>${esc(l.qty==null?l.name:`${l.name}×${fmt(num(l.qty))}${l.unit||""}`)}</span><input class="pc" data-i="${i}" type="number" step="0.01" min="0" inputmode="decimal" placeholder="成本" value="${c??""}"></label>`}).join("")}
+    <div class="grid2">
+      <label class="field">售价（元）<input id="p-amt" type="number" step="0.01" min="0" inputmode="decimal" required value="${hasPrice(x)?num(x.amount):""}"></label>
+      <label class="field">获得积分<input id="p-pts" type="number" step="any" inputmode="decimal" value="${hasPrice(x)?num(x.points):""}"></label>
+    </div>
+    <p class="preview" id="p-pv"></p>
+    <div class="actions" style="justify-content:flex-end"><button class="btn" type="button" id="cancel">取消</button><button class="btn primary" type="submit">保存</button></div>
+  </form>`);
+  setTimeout(()=>{const e=$("p-amt");e&&e.focus()},40);
+  let touched=hasPrice(x);
+  const cost=()=>{let c=0,miss=0;$("sheet").querySelectorAll(".pc").forEach(e=>{if(e.value==="")miss++;else c+=num(e.value)});return{c,miss}};
+  const pv=()=>{const k=cost(),a=$("p-amt").value;$("p-pv").textContent=`成本合计 ¥${fmt(k.c)}`+(k.miss?`（${k.miss} 样没填成本，利润先不算）`:"")+(a!==""&&!k.miss?` · 利润 ¥${fmt(num(a)-k.c*COSTX)}（售价 − 成本×${COSTX}）`:"")};
+  $("p-amt").oninput=()=>{if(!touched)$("p-pts").value=$("p-amt").value===""?"":Math.floor(num($("p-amt").value)*S.rate);pv()};
+  $("p-pts").oninput=()=>touched=true;$("sheet").querySelectorAll(".pc").forEach(e=>e.oninput=pv);pv();
+  $("cancel").onclick=()=>back?custSheet(back):closeSheet();
+  $("pForm").onsubmit=ev=>{ev.preventDefault();const a=num($("p-amt").value);
+    const nl=lines.map((l,i)=>{const e=$("sheet").querySelector(`.pc[data-i="${i}"]`);return{...l,cost:e.value===""?null:num(e.value)}});
+    x.lines=nl;x.products=linesText(nl);x.amount=a;x.points=$("p-pts").value===""?Math.floor(a*S.rate):num($("p-pts").value);
+    saveSales();const v=saleProfit(x);toast(`已保存：售价 ¥${fmt(a)}`+(v==null?"，有产品缺成本":`，利润 ¥${fmt(v)}`));
+    back?custSheet(back):closeSheet()};
 }
 function custSheet(name){
   const c=customers().find(c=>c.name===name);if(!c)return;
@@ -560,10 +618,10 @@ function custSheet(name){
   <div class="stats" style="grid-template-columns:repeat(2,minmax(0,1fr))">
     <div class="stat"><b>¥${fmt(c.sum)}</b><span>累计消费</span></div>
     <div class="stat"><b>${c.n}</b><span>消费次数</span></div>
-    <div class="stat"><b>${fmt(c.qty)}</b><span>消费数量</span></div>
+    <div class="stat"><b>${pfHtml(c.profit)||"¥0"}</b><span>累计利润${c.pend?`（${c.pend} 笔待填售价）`:""}${c.miss?`（${c.miss} 笔缺成本）`:""}</span></div>
     <div class="stat"><b class="pts">${fmt(c.pts)}</b><span>现有积分</span></div>
   </div>
-  <p class="preview" style="margin:0">常买：${top}<br>客单价 ¥${c.n?fmt(c.sum/c.n):0} · 最近消费 ${ymd(c.last)} ${hm(c.last)}</p>
+  <p class="preview" style="margin:0">常买：${top} · 消费数量 ${fmt(c.qty)}<br>客单价 ¥${c.n?fmt(c.sum/c.n):0} · 最近消费 ${ymd(c.last)} ${hm(c.last)}</p>
   <form id="redeemForm" class="actions" style="align-items:end">
     <label class="field" style="flex:1 1 120px">兑换扣积分<input id="r-pts" type="number" min="1" step="any" inputmode="decimal" placeholder="分数"></label>
     <label class="field" style="flex:2 1 160px">兑换内容<input id="r-what" placeholder="如：免费小杯一杯"></label>
@@ -595,10 +653,10 @@ function rateSheet(){
   $("rateForm").onsubmit=ev=>{ev.preventDefault();S.rate=num($("rt").value);persist();renderCust();closeSheet();toast("积分规则已保存")};
 }
 function exportSales(){
-  const rows=[["消费时间","客户名称","购买产品","消费数量","消费金额（元）","积分变动","类型","备注"]];
-  for(const x of S.sales)rows.push([`${ymd(x.ts)} ${hm(x.ts)}`,x.customer,x.type==="redeem"?x.products:linesText(saleLines(x)),x.type==="redeem"?"":fmt(saleQty(x)),x.type==="redeem"?"":num(x.amount),num(x.points),x.type==="redeem"?"积分兑换":"消费",x.note]);
-  rows.push([]);rows.push(["客户名称","累计消费（元）","消费次数","消费数量","现有积分","最近消费"]);
-  for(const c of customers().sort((a,b)=>b.sum-a.sum))rows.push([c.name,fmt(c.sum),c.n,fmt(c.qty),c.pts,`${ymd(c.last)} ${hm(c.last)}`]);
+  const rows=[["消费时间","客户名称","购买产品","消费数量","售价（元）","进货成本（元）","利润（元，售价−成本×1.1）","积分变动","类型","备注"]];
+  for(const x of S.sales)rows.push([`${ymd(x.ts)} ${hm(x.ts)}`,x.customer,x.type==="redeem"?x.products:linesText(saleLines(x)),x.type==="redeem"?"":fmt(saleQty(x)),x.type==="redeem"?"":hasPrice(x)?num(x.amount):"待填",x.type==="redeem"?"":(saleCost(x).miss?"缺":fmt(saleCost(x).c)),saleProfit(x)==null?"":fmt(saleProfit(x)),num(x.points),x.type==="redeem"?"积分兑换":"消费",x.note]);
+  rows.push([]);rows.push(["客户名称","累计消费（元）","累计利润（元）","消费次数","消费数量","现有积分","最近消费"]);
+  for(const c of customers().sort((a,b)=>b.sum-a.sum))rows.push([c.name,fmt(c.sum),fmt(c.profit),c.n,fmt(c.qty),c.pts,`${ymd(c.last)} ${hm(c.last)}`]);
   const csv="﻿"+rows.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\n");
   saveFile(`客户消费_${stamp()}.csv`,csv,"text/csv;charset=utf-8");toast("已导出到“下载”文件夹");
 }
@@ -611,6 +669,7 @@ document.addEventListener("click",e=>{
   const tb=e.target.closest("[data-tab]");if(tb){setTab(tb.dataset.tab);return}
   const so=e.target.closest("[data-sort]");if(so){S.csort=so.dataset.sort;document.querySelectorAll("[data-sort]").forEach(b=>b.setAttribute("aria-pressed",b===so));renderCust();return}
   if(e.target.closest("[data-sale]")){saleSheet();return}
+  const pb=e.target.closest("[data-price]");if(pb){const x=S.sales.find(s=>s.id===pb.dataset.price);priceSheet(pb.dataset.price,!$("scrim").hidden&&x?x.customer:null);return}
   const ds=e.target.closest("[data-delsale]");if(ds){if(!ds.dataset.armed){ds.dataset.armed=1;ds.textContent="确认删除";setTimeout(()=>{if(ds.isConnected){delete ds.dataset.armed;ds.textContent="删除"}},3000);return}
     const id=ds.dataset.delsale;const x=S.sales.find(s=>s.id===id);S.sales=S.sales.filter(s=>s.id!==id);
     let back=0;if(x&&Array.isArray(x.lines))for(const l of x.lines){if(!l.itemId)continue;const it=S.items.find(i=>i.id===l.itemId);if(!it)continue;
