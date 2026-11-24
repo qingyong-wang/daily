@@ -178,6 +178,7 @@ button,input,select{font:inherit;color:inherit}
   <header class="head">
     <div><h1>茶店库存 · 客户</h1><p id="sub">正在读取库存…</p></div>
     <div class="actions">
+      <button class="btn sync" id="bkBtn" type="button" data-s="off" hidden><i></i><span>自动备份</span></button>
       <button class="btn sync" id="csBtn" type="button" data-s="off" hidden><i></i><span>云同步</span></button>
       <button class="btn" id="exportBtn" type="button">导出表格</button>
       <button class="btn" id="backupBtn" type="button">备份</button>
@@ -451,14 +452,16 @@ $("clearEx").onclick=async()=>{const b=$("clearEx");if(!b.dataset.armed){b.datas
   b.disabled=false;delete b.dataset.armed;b.textContent="清除示例"};
 function saveFile(name,text,type){const blob=new Blob([text],{type});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
 function stamp(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
-$("exportBtn").onclick=()=>{
-  if(S.tab==="cust"){exportSales();return}
+function invCSV(){
   const rows=[["品名","分类","库存","单位","安全库存","状态","进价","保质期至","供应商"]];
   for(const it of S.items){const {s,exp}=status(it);rows.push([it.name,it.cat,num(it.qty),it.unit,num(it.min),s[1]+(exp?"/"+exp[1]:""),it.cost,it.expiry,it.supplier])}
-  const csv="﻿"+rows.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\n");
-  saveFile(`茶店库存_${stamp()}.csv`,csv,"text/csv;charset=utf-8");toast("已导出表格到“下载”文件夹");
+  return "﻿"+rows.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\n")}
+const backupJSON=()=>JSON.stringify({v:3,cats:S.cats,items:S.items,moves:S.moves,sales:S.sales,rate:S.rate,updatedAt:S.updatedAt});
+$("exportBtn").onclick=()=>{
+  if(S.tab==="cust"){exportSales();return}
+  saveFile(`茶店库存_${stamp()}.csv`,invCSV(),"text/csv;charset=utf-8");toast("已导出表格到“下载”文件夹");
 };
-$("backupBtn").onclick=()=>{saveFile(`茶店库存备份_${stamp()}.json`,JSON.stringify({v:3,cats:S.cats,items:S.items,moves:S.moves,sales:S.sales,rate:S.rate}),"application/json");toast("备份已保存到“下载”文件夹")};
+$("backupBtn").onclick=()=>{saveFile(`茶店库存备份_${stamp()}.json`,backupJSON(),"application/json");toast("备份已保存到“下载”文件夹")};
 $("restoreBtn").onclick=()=>$("restoreFile").click();
 $("restoreFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
   r.onload=()=>{try{const d=JSON.parse(r.result);if(!Array.isArray(d.items))throw 0;S.items=d.items;S.moves=Array.isArray(d.moves)?d.moves:[];S.sales=Array.isArray(d.sales)?d.sales:[];S.rate=num(d.rate)||1;if(Array.isArray(d.cats)&&d.cats.length)S.cats=d.cats;persist();renderCats();render();renderLog();renderCust();toast(`已恢复 ${S.items.length} 个品项`)}catch(_){toast("这个文件不是本系统的备份")}e.target.value=""};
@@ -664,14 +667,13 @@ function rateSheet(){
   $("cancel").onclick=closeSheet;
   $("rateForm").onsubmit=ev=>{ev.preventDefault();S.rate=num($("rt").value);persist();renderCust();closeSheet();toast("积分规则已保存")};
 }
-function exportSales(){
+function salesCSV(){
   const rows=[["消费时间","客户名称","购买产品","消费数量","售价（元）","进货成本（元）","利润（元，售价−成本×1.1）","积分变动","类型","备注"]];
   for(const x of S.sales)rows.push([`${ymd(x.ts)} ${hm(x.ts)}`,x.customer,x.type==="redeem"?x.products:linesText(saleLines(x)),x.type==="redeem"?"":fmt(saleQty(x)),x.type==="redeem"?"":hasPrice(x)?num(x.amount):"待填",x.type==="redeem"?"":(saleCost(x).miss?"缺":fmt(saleCost(x).c)),saleProfit(x)==null?"":fmt(saleProfit(x)),num(x.points),x.type==="redeem"?"积分兑换":"消费",x.note]);
   rows.push([]);rows.push(["客户名称","累计消费（元）","累计利润（元）","消费次数","消费数量","现有积分","最近消费"]);
   for(const c of customers().sort((a,b)=>b.sum-a.sum))rows.push([c.name,fmt(c.sum),fmt(c.profit),c.n,fmt(c.qty),c.pts,`${ymd(c.last)} ${hm(c.last)}`]);
-  const csv="﻿"+rows.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\n");
-  saveFile(`客户消费_${stamp()}.csv`,csv,"text/csv;charset=utf-8");toast("已导出到“下载”文件夹");
-}
+  return "﻿"+rows.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\n")}
+function exportSales(){saveFile(`客户消费_${stamp()}.csv`,salesCSV(),"text/csv;charset=utf-8");toast("已导出到“下载”文件夹")}
 function setTab(t){S.tab=t;$("p-inv").hidden=t!=="inv";$("p-cust").hidden=t!=="cust";
   $("t-inv").setAttribute("aria-selected",t==="inv");$("t-cust").setAttribute("aria-selected",t==="cust");
   $("addBtn").textContent=t==="cust"?"＋ 记一笔消费":"＋ 新增品项";$("exportBtn").textContent=t==="cust"?"导出消费记录":"导出表格";
@@ -703,7 +705,7 @@ const KEY="tea-shop-inventory-v1";
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 function snap(){return {cats:S.cats,items:S.items,moves:S.moves.slice(0,2000),sales:S.sales,rate:S.rate,updatedAt:S.updatedAt}}
 /* persist(true) = 只存本机、不算一次修改（例如载入示例、收到云端数据） */
-function persist(quiet){if(!quiet)S.updatedAt=Date.now();localStorage.setItem(KEY,JSON.stringify(snap()));if(!quiet)csSchedule()}
+function persist(quiet){if(!quiet)S.updatedAt=Date.now();localStorage.setItem(KEY,JSON.stringify(snap()));if(!quiet)csSchedule();if(S.updatedAt)bkSchedule()}
 function applyData(d){S.items=d.items||[];S.moves=d.moves||[];S.sales=d.sales||[];S.rate=num(d.rate)||1;S.updatedAt=num(d.updatedAt);if(Array.isArray(d.cats)&&d.cats.length)S.cats=d.cats}
 function rerender(){renderCats();render();renderLog();renderCust()}
 function commit(){persist();render();renderLog()}
@@ -792,6 +794,56 @@ function csInit(){if(!CS.on)return;$("csBtn").hidden=false;
   document.addEventListener("visibilitychange",()=>{if(!CS.user)return;if(document.hidden){if(CS.dirty)csPush()}else csPull()});
   window.addEventListener("online",()=>{if(CS.user)CS.dirty?csPush():csPull()})}
 
+/* ---------- 自动备份（电脑上的 Chrome / Edge）：每次改动后自动存一份到你选的文件夹 ---------- */
+const BK={supported:typeof window.showDirectoryPicker==="function"&&!!window.indexedDB,dir:null,name:"",status:"off",last:0,err:"",timer:0,busy:false,again:false};
+try{BK.last=+(localStorage.getItem("tea-bk-last")||0)}catch(e){}
+function idb(mode,fn){return new Promise((res,rej)=>{const r=indexedDB.open("tea-shop",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onerror=()=>rej(r.error);
+  r.onsuccess=()=>{const tx=r.result.transaction("kv",mode),q=fn(tx.objectStore("kv"));tx.oncomplete=()=>res(q&&q.result);tx.onerror=()=>rej(tx.error)}})}
+const idbGet=k=>idb("readonly",st=>st.get(k)),idbSet=(k,v)=>idb("readwrite",st=>st.put(v,k)),idbDel=k=>idb("readwrite",st=>st.delete(k));
+function bkWhen(ms){if(!ms)return"";const d=new Date(ms);return(ymd(ms)===stamp()?"今天 ":`${d.getMonth()+1}月${d.getDate()}日 `)+hm(ms)}
+function bkPaint(){const b=$("bkBtn");if(!BK.supported){b.hidden=true;return}b.hidden=false;
+  const m={off:["off","未开启"],need:["bad","需要允许"],err:["bad","失败"],ok:[BK.busy?"busy":"ok",BK.last?bkWhen(BK.last):"已开启"]}[BK.status];
+  b.dataset.s=m[0];b.querySelector("span").textContent="自动备份："+m[1]}
+function bkSchedule(ms){if(!BK.dir||BK.status!=="ok")return;clearTimeout(BK.timer);BK.timer=setTimeout(bkWrite,ms==null?3000:ms)}
+async function bkFile(dir,name,text){const fh=await dir.getFileHandle(name,{create:true});const w=await fh.createWritable();await w.write(text);await w.close()}
+async function bkPrune(dir){let done="";try{done=localStorage.getItem("tea-bk-prune")||""}catch(e){}if(done===stamp())return;
+  const d=new Date();d.setDate(d.getDate()-30);const cut=ymd(d.getTime()),old=[];
+  for await(const [n] of dir.entries()){const m=/^茶店库存备份-(\d{4}-\d\d-\d\d)\.json$/.exec(n);if(m&&m[1]<cut)old.push(n)}
+  for(const n of old){try{await dir.removeEntry(n)}catch(e){}}try{localStorage.setItem("tea-bk-prune",stamp())}catch(e){}}
+async function bkWrite(){clearTimeout(BK.timer);if(!BK.dir||BK.status!=="ok")return;if(BK.busy){BK.again=true;return}
+  BK.busy=true;bkPaint();
+  try{const j=backupJSON();
+    await bkFile(BK.dir,"茶店库存备份-最新.json",j);await bkFile(BK.dir,`茶店库存备份-${stamp()}.json`,j);
+    await bkFile(BK.dir,"库存表-最新.csv",invCSV());await bkFile(BK.dir,"客户消费-最新.csv",salesCSV());
+    await bkPrune(BK.dir);BK.last=Date.now();BK.err="";try{localStorage.setItem("tea-bk-last",BK.last)}catch(e){}
+  }catch(e){if(e&&(e.name==="NotAllowedError"||e.name==="SecurityError"))BK.status="need";
+    else{BK.status="err";BK.err=e&&e.name==="NotFoundError"?"找不到这个文件夹了，可能被移动或删除":String(e&&e.message||e)}}
+  BK.busy=false;bkPaint();if(BK.again){BK.again=false;bkSchedule(500)}}
+async function bkPick(){try{const h=await window.showDirectoryPicker({id:"tea-backup",mode:"readwrite",startIn:"documents"});
+    await idbSet("backupDir",h);BK.dir=h;BK.name=h.name;BK.status="ok";await bkWrite();
+    if(BK.status==="ok")toast(`自动备份已开启，存到「${h.name}」`)}
+  catch(e){if(e&&e.name==="AbortError")return;toast("没能设置自动备份："+String(e&&e.message||e))}}
+async function bkResume(){if(!BK.dir)return bkPick();
+  try{const p=await BK.dir.requestPermission({mode:"readwrite"});if(p==="granted"){BK.status="ok";await bkWrite();toast("自动备份已继续")}else BK.status="need"}
+  catch(e){BK.status="err";BK.err=String(e&&e.message||e)}bkPaint()}
+async function bkOff(){try{await idbDel("backupDir")}catch(e){}clearTimeout(BK.timer);BK.dir=null;BK.name="";BK.status="off";bkPaint();toast("自动备份已关闭，文件夹里已有的备份不会删除")}
+function bkSheet(){const where=BK.name?`「<b>${esc(BK.name)}</b>」`:"";
+  const txt={off:"还没开启。选一个文件夹（建议在“文稿”里新建一个“茶店备份”文件夹），之后每次改动都会自动存一份进去。",
+    need:`浏览器重新打开后，需要你点一下允许，才能继续往${where}里写备份。`,
+    err:`备份失败${BK.err?"："+esc(BK.err):""}。`,
+    ok:`已开启，备份存到${where}${BK.last?"，最近一次 "+bkWhen(BK.last):""}。`}[BK.status];
+  const btns={off:'<button class="btn primary" data-m="pick">选择文件夹</button>',need:'<button class="btn primary" data-m="resume">允许并继续</button><button class="btn" data-m="pick">换个文件夹</button>',
+    err:'<button class="btn primary" data-m="resume">重试</button><button class="btn" data-m="pick">换个文件夹</button>',ok:'<button class="btn primary" data-m="now">立即备份一次</button><button class="btn" data-m="pick">换个文件夹</button><button class="btn" data-m="off">关闭</button>'}[BK.status];
+  const d=csModal(`<div class="cs-box"><h2>自动备份</h2><p>${txt}</p>
+    <p>每次改动后约 3 秒自动保存：<br>· 茶店库存备份-最新.json（恢复用这个）<br>· 茶店库存备份-日期.json（每天一份，保留 30 天）<br>· 库存表-最新.csv、客户消费-最新.csv（可用表格软件打开看）</p>
+    <div class="cs-btns" style="flex-wrap:wrap">${btns}</div><button type="button" class="cs-skip" data-m="skip">关闭</button></div>`);
+  d.addEventListener("click",ev=>{const b=ev.target.closest("button");if(!b)return;const m=b.dataset.m;
+    if(m==="pick"){csClose();bkPick()}if(m==="resume"){csClose();bkResume()}if(m==="off"){csClose();bkOff()}if(m==="now"){csClose();bkWrite().then(()=>toast(BK.status==="ok"?"已备份":"备份失败"))}})}
+async function bkInit(){if(!BK.supported){bkPaint();return}$("bkBtn").onclick=bkSheet;
+  try{const h=await idbGet("backupDir");if(h){BK.dir=h;BK.name=h.name;BK.status=(await h.queryPermission({mode:"readwrite"}))==="granted"?"ok":"need"}}
+  catch(e){BK.status="err";BK.err=String(e&&e.message||e)}
+  bkPaint();if(BK.status==="ok"&&S.updatedAt)bkSchedule(800)}
+
 renderCats();
 try{const raw=localStorage.getItem(KEY);if(raw){applyData(JSON.parse(raw))}else{examples();persist(true)}}
 catch(e){toast("浏览器禁止了本地存储，数据无法保存")}
@@ -800,7 +852,7 @@ $("sub").textContent="点品名编辑 · 入库/出库/盘点自动记录 · "+w
 render();renderLog();renderCust();
 try{if(localStorage.getItem(KEY+"-tab")==="cust")setTab("cust")}catch(e){}
 window.addEventListener("storage",e=>{if(e.key===KEY&&e.newValue){applyData(JSON.parse(e.newValue));rerender()}});
-csInit();
+csInit();bkInit();
 </script>
 </body>
 </html>
