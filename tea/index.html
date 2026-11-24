@@ -157,6 +157,14 @@ button,input,select{font:inherit;color:inherit}
 .cfold .log{border-radius:8px}
 .foldh{border:0;background:transparent;padding:0;font:inherit;cursor:pointer;display:inline-flex;align-items:baseline;gap:4px}
 .foldh[aria-expanded="true"] .chev{transform:rotate(90deg)}
+/* 销售趋势 */
+.trend{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px 10px;display:grid;gap:8px;position:relative}
+.trend-h{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between}
+.trend-sum{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}.trend-sum b{color:var(--ink);font-size:16px}
+.trend svg{display:block;width:100%;height:200px;touch-action:pan-y}
+.trend .gl{stroke:var(--line);stroke-width:1}.trend .ax{fill:var(--muted);font-size:11px;font-family:var(--body)}
+.trend .bar{fill:var(--accent)}.trend svg.hov .bar{opacity:.35}.trend svg.hov .bar.on{opacity:1}
+.ttip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);border-radius:8px;padding:6px 10px;font-size:12px;line-height:1.5;white-space:nowrap;font-variant-numeric:tabular-nums;z-index:5}
 /* 云同步 */
 .sync{display:inline-flex;align-items:center;gap:6px}
 .sync i{width:8px;height:8px;border-radius:50%;background:var(--muted)}
@@ -227,6 +235,13 @@ button,input,select{font:inherit;color:inherit}
       <div class="stat"><b id="cProfit">–</b><span id="cProfitL">本月利润（元）</span></div>
       <div class="stat"><b id="cOrders">–</b><span>本月消费笔数</span></div>
       <div class="stat"><b id="cPts">–</b><span>客户积分合计</span></div>
+    </section>
+    <section class="trend" aria-label="销售额趋势">
+      <div class="trend-h"><h2>销售额趋势</h2>
+        <div class="chips" role="group" aria-label="时间粒度"><button class="chip" type="button" data-trend="day" aria-pressed="true">每天</button><button class="chip" type="button" data-trend="week" aria-pressed="false">每周</button><button class="chip" type="button" data-trend="month" aria-pressed="false">每月</button></div></div>
+      <div class="trend-sum" id="trendSum"></div>
+      <svg id="trendSvg" role="img" aria-label="销售额柱状图"></svg>
+      <div class="ttip" id="ttip" hidden></div>
     </section>
     <section class="bar">
       <input class="search" id="cq" type="search" placeholder="搜客户名称或产品">
@@ -515,8 +530,46 @@ function renderCust(){
   $("clistN").textContent=`（${cs.length} 位，点击${$("clist").hidden?"展开":"收起"}）`;
   $("slogN").textContent=`（${sl.length} 条，点击${$("slogBox").hidden?"展开":"收起"}）`;
   $("slog").innerHTML=sl.length?sl.slice(0,100).map(saleLi).join(""):`<li><span class="muted" style="grid-column:1/-1">还没有消费记录。</span></li>`;
+  renderTrend();
   $("rateBtn").textContent=`积分规则：每 1 元 = ${fmt(S.rate)} 分`;
 }
+/* ---------- 销售额趋势：每天（近 30 天）/ 每周（近 12 周）/ 每月（近 12 个月） ---------- */
+function trendData(mode){const t=today(),B=[];
+  if(mode==="day")for(let i=29;i>=0;i--){const a=new Date(t);a.setDate(a.getDate()-i);const b=new Date(a);b.setDate(b.getDate()+1);B.push({a:+a,b:+b,l:`${a.getMonth()+1}/${a.getDate()}`,full:`${a.getMonth()+1}月${a.getDate()}日`})}
+  else if(mode==="week"){const mon=new Date(t);mon.setDate(mon.getDate()-(t.getDay()+6)%7);
+    for(let i=11;i>=0;i--){const a=new Date(mon);a.setDate(a.getDate()-7*i);const b=new Date(a);b.setDate(b.getDate()+7);const e=new Date(b-864e5);
+      B.push({a:+a,b:+b,l:`${a.getMonth()+1}/${a.getDate()}`,full:`${a.getMonth()+1}月${a.getDate()}日–${e.getMonth()+1}月${e.getDate()}日`})}}
+  else for(let i=11;i>=0;i--){const a=new Date(t.getFullYear(),t.getMonth()-i,1),b=new Date(a.getFullYear(),a.getMonth()+1,1);
+    B.push({a:+a,b:+b,l:`${a.getMonth()+1}月`,full:`${a.getFullYear()}年${a.getMonth()+1}月`})}
+  for(const x of B){x.sum=0;x.n=0;x.pf=0;x.miss=0}let pend=0;
+  const lo=B[0].a,hi=B[B.length-1].b;
+  for(const x of S.sales){if(x.type==="redeem"||x.ts<lo||x.ts>=hi)continue;if(!hasPrice(x)){pend++;continue}
+    const k=B.find(b=>x.ts>=b.a&&x.ts<b.b);if(!k)continue;k.sum+=num(x.amount);k.n++;const v=saleProfit(x);v==null?k.miss++:k.pf+=v}
+  return{B,pend}}
+function niceMax(v){if(v<=0)return 100;const p=Math.pow(10,Math.floor(Math.log10(v))),f=v/p;return(f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*p}
+function renderTrend(){const svg=$("trendSvg");if(!svg||$("p-cust").hidden)return;
+  const mode=S.trend||"day",{B,pend}=trendData(mode);
+  const W=svg.clientWidth||600,H=200,L=46,R=6,T=10,Bt=22,pw=W-L-R,ph=H-T-Bt;
+  const max=niceMax(Math.max(...B.map(b=>b.sum))),y=v=>T+ph-v/max*ph,step=pw/B.length,bw=Math.max(2,Math.min(28,step-2));
+  const every=Math.max(1,Math.ceil(B.length*38/pw));
+  let g="";for(const v of [0,max/2,max]){g+=`<line class="gl" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L-6}" y="${y(v)+4}" text-anchor="end">${v>=10000?fmt(v/10000)+"万":fmt(v)}</text>`}
+  B.forEach((b,i)=>{const cx=L+step*i+step/2,x=cx-bw/2,top=y(b.sum),h=T+ph-top,r=Math.min(4,bw/2,h);
+    if(b.sum>0)g+=h<=r?`<rect class="bar" data-i="${i}" x="${x}" y="${top}" width="${bw}" height="${Math.max(h,1)}"/>`:`<path class="bar" data-i="${i}" d="M${x},${T+ph}V${top+r}Q${x},${top} ${x+r},${top}H${x+bw-r}Q${x+bw},${top} ${x+bw},${top+r}V${T+ph}Z"/>`;
+    if((B.length-1-i)%every===0)g+=`<text class="ax" x="${cx}" y="${H-6}" text-anchor="middle">${b.l}</text>`;
+    g+=`<rect data-i="${i}" x="${L+step*i}" y="${T}" width="${step}" height="${ph+Bt}" fill="transparent"/>`});
+  svg.setAttribute("viewBox",`0 0 ${W} ${H}`);svg.innerHTML=g;
+  const tot=B.reduce((a,b)=>a+b.sum,0),n=B.reduce((a,b)=>a+b.n,0),pf=B.reduce((a,b)=>a+b.pf,0);
+  const rng={day:"近 30 天",week:"近 12 周",month:"近 12 个月"}[mode];
+  $("trendSum").innerHTML=`${rng}销售额 <b>¥${fmt(tot)}</b> · ${n} 笔 · 利润 ¥${fmt(pf)}`+(pend?` · <span class="pend">${pend} 笔待填售价，未计入</span>`:"");
+  svg.setAttribute("aria-label",`${rng}销售额柱状图，合计 ${fmt(tot)} 元`);
+  const tip=$("ttip"),box=svg.closest(".trend");
+  const show=ev=>{const r=ev.target.closest("[data-i]");if(!r){hide();return}const i=+r.dataset.i,b=B[i];
+    svg.classList.add("hov");svg.querySelectorAll(".bar").forEach(e=>e.classList.toggle("on",+e.dataset.i===i));
+    tip.innerHTML=`<b>${b.full}</b><br>销售额 ¥${fmt(b.sum)} · ${b.n} 笔<br>利润 ¥${fmt(b.pf)}${b.miss?`（${b.miss} 笔缺成本）`:""}`;tip.hidden=false;
+    const bb=box.getBoundingClientRect(),sb=svg.getBoundingClientRect(),cx=sb.left-bb.left+(L+step*i+step/2)*sb.width/W;
+    tip.style.left=Math.max(4,Math.min(bb.width-tip.offsetWidth-4,cx-tip.offsetWidth/2))+"px";tip.style.top=(sb.top-bb.top+4)+"px"};
+  const hide=()=>{tip.hidden=true;svg.classList.remove("hov")};
+  svg.onpointermove=show;svg.onpointerdown=show;svg.onpointerleave=hide}
 function foldHtml(name){const list=S.sales.filter(x=>x.customer===name);
   return `<div class="cfold"><div class="log sales"><ul>${list.slice(0,60).map(saleLi).join("")}</ul></div>
   <div class="actions"><button class="btn" type="button" data-cust="${esc(name)}">客户详情 · 兑换积分</button><button class="btn" type="button" data-salefor="${esc(name)}">＋ 给 ${esc(name)} 再记一笔</button></div></div>`}
@@ -695,10 +748,13 @@ document.addEventListener("click",e=>{
     if(!$("scrim").hidden&&x&&S.sales.some(s=>s.customer===x.customer))custSheet(x.customer);else if(!$("scrim").hidden)closeSheet();toast("已删除记录");return}
   const cn=e.target.closest("[data-cust]");if(cn){custSheet(cn.dataset.cust);return}
   const sf=e.target.closest("[data-salefor]");if(sf){saleSheet(sf.dataset.salefor);return}
+  const tr=e.target.closest("[data-trend]");if(tr){S.trend=tr.dataset.trend;document.querySelectorAll("[data-trend]").forEach(b=>b.setAttribute("aria-pressed",b===tr));try{localStorage.setItem("tea-shop-inventory-v1-trend",S.trend)}catch(e){}renderTrend();return}
   const fo=e.target.closest("[data-fold]");if(fo){const n=fo.dataset.fold;S.open.has(n)?S.open.delete(n):S.open.add(n);renderCust();return}
 });
 $("cq").oninput=e=>{S.cq=e.target.value;renderCust()};
 $("rateBtn").onclick=rateSheet;
+try{const t=localStorage.getItem("tea-shop-inventory-v1-trend");if(t==="week"||t==="month"){S.trend=t;document.querySelectorAll("[data-trend]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.trend===t))}}catch(e){}
+{let rt=0;window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(renderTrend,150)})}
 $("slogBtn").onclick=()=>{const b=$("slogBox"),o=b.hidden;b.hidden=!o;$("slogBtn").setAttribute("aria-expanded",o);try{localStorage.setItem("tea-shop-inventory-v1-slog2",o?"1":"0")}catch(e){}renderCust()};
 $("clistBtn").onclick=()=>{const b=$("clist"),o=b.hidden;b.hidden=!o;$("clistBtn").setAttribute("aria-expanded",o);try{localStorage.setItem("tea-shop-inventory-v1-clist",o?"1":"0")}catch(e){}renderCust()};
 try{if(localStorage.getItem("tea-shop-inventory-v1-slog2")==="0"){$("slogBox").hidden=true;$("slogBtn").setAttribute("aria-expanded","false")}
