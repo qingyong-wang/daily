@@ -194,6 +194,9 @@ body.is-dragging,body.is-dragging *{cursor:grabbing!important;user-select:none;-
 .done .ck::after{content:"";position:absolute;left:6.5px;top:2.5px;width:5px;height:10px;border:solid var(--card);border-width:0 2px 2px 0;transform:rotate(45deg)}
 .txt{flex:1;min-width:0;overflow-wrap:anywhere;text-align:left;padding:2px 0;cursor:text}
 .done .txt{color:var(--muted);text-decoration:line-through}
+.streak{display:inline-block;margin-left:6px;padding:0 6px;border-radius:4px;font-size:11px;line-height:17px;color:var(--muted);background:var(--soft);vertical-align:2px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.streak.hot{color:var(--red);background:none;border:1px solid currentColor;font-weight:600}
+.done .streak{text-decoration:none}
 .tag{display:inline-block;margin-left:8px;padding:0 6px;border:1px solid var(--line);border-radius:4px;font-size:11px;line-height:17px;color:var(--muted);vertical-align:2px;white-space:nowrap}
 .edit{flex:1;min-width:0;border:0;border-bottom:1.5px solid var(--red);background:none;padding:2px 0;outline:none}
 .ops{display:flex;gap:2px;flex:none}
@@ -926,7 +929,7 @@ function itemHTML(kind,x,done,star,canUp,canDown){
     '<span class="grip'+(canUp||canDown?'':' none')+'" aria-hidden="true" title="按住拖动排序">⋮⋮</span>'+
     '<button class="ck" data-act="toggle"'+a+' aria-pressed="'+!!done+'" aria-label="'+(done?'标为未完成':'标为完成')+'"></button>'+
     (isEdit?'<input class="edit" id="edit-input" type="text" maxlength="200" value="'+esc(x.text)+'" aria-label="修改任务">'
-           :'<button class="txt" data-act="edit"'+a+' title="点击修改">'+esc(x.text)+(kind==='r'?'<span class="tag">每天</span>':'')+'</button>')+
+           :'<button class="txt" data-act="edit"'+a+' title="点击修改">'+esc(x.text)+(kind==='r'?'<span class="tag">每天</span>'+(function(n){return n?'<span class="streak'+(n>=7?' hot':'')+'" title="已连续打卡 '+n+' 天">🔥 连续 '+n+' 天</span>':''})(hbStreak(findRoutine(x.id)||x,ui.view)):'')+'</button>')+
     '<span class="ops">'+
     '<button class="op" data-act="up"'+a+' aria-label="上移" title="上移"'+(canUp?'':' style="visibility:hidden" tabindex="-1"')+'>↑</button>'+
     '<button class="op" data-act="down"'+a+' aria-label="下移" title="下移"'+(canDown?'':' style="visibility:hidden" tabindex="-1"')+'>↓</button>'+
@@ -1015,6 +1018,13 @@ function trendHover(i){
 /* ---------- 习惯打卡：每个每日重复任务一张一年的方格日历（只读现有记录，不新增数据） ---------- */
 function hbActive(r,d){return r.from<=d&&(!r.until||d<r.until)}
 function hbDone(r,d){return !!dayR(d).rdone[r.id]}
+/* 截到某天为止的连续打卡天数；那天还没打卡就从前一天往回数（不算断） */
+function hbStreak(r,v){
+  var n=0, d=v;
+  if(hbActive(r,d)&&!hbDone(r,d))d=addDays(d,-1);
+  while(n<4000&&hbActive(r,d)&&hbDone(r,d)){n++;d=addDays(d,-1)}
+  return n;
+}
 function hbStats(r,start,t){
   var cur=0, d=t;
   if(hbActive(r,d)&&!hbDone(r,d))d=addDays(d,-1); /* 今天还没打卡不算断 */
