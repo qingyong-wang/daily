@@ -90,6 +90,10 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .plan-p{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .plan-n{margin-left:auto;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .plan-b{border-top:1px solid var(--line)}
+.pnav{display:flex;align-items:center;justify-content:center;gap:6px;padding:6px 8px 0}
+.pnav button{background:none;border:1px solid var(--line);border-radius:8px;color:var(--muted);font:inherit;font-size:12px;min-width:32px;padding:4px 10px;cursor:pointer}
+.pnav .pnav-c{min-width:72px}
+.pnav .pnav-c.off{color:var(--green);border-color:currentColor;font-weight:600}
 .plan .list{border:0;border-radius:0;background:none}
 .plan .item{padding:6px 6px 6px 12px;font-size:14px;gap:8px}
 .plan .ck{width:18px;height:18px;border-radius:5px}
@@ -485,6 +489,15 @@ function stableBy(list,key){
   return list.map(function(x,i){return [key(x),i,x]}).sort(function(a,b){return a[0]-b[0]||a[1]-b[1]}).map(function(p){return p[2]});
 }
 function weekStart(v){return addDays(v,-((pd(v).getDay()+6)%7))}
+var POFF={week:0,month:0,year:0};
+function shiftPeriod(pk,v,n){
+  if(!n)return v;
+  if(pk==='week')return addDays(v,7*n);
+  var d=pd(v);d.setDate(1);
+  if(pk==='month')d.setMonth(d.getMonth()+n);else d.setFullYear(d.getFullYear()+n);
+  return ds(d);
+}
+function planKey(pk,v){return periodKey(pk,shiftPeriod(pk,v,POFF[pk]||0))}
 function periodKey(pk,v){return pk==='year'?v.slice(0,4):pk==='month'?v.slice(0,7):pk==='week'?weekStart(v):''}
 function periodLabel(pk,key,withYear){
   if(pk==='year')return key+'年';
@@ -502,7 +515,7 @@ function planList(pk,v,write){
   var p=state.plans;
   if(pk.indexOf('life:')===0){var c=pk.slice(5);return c==='其他'?p.life:(p.lifeCats[c]||(p.lifeCats[c]=[]))}
   if(pk==='life'||pk==='seven')return p[pk];
-  var k=periodKey(pk,v);
+  var k=planKey(pk,v);
   if(!p[pk][k]){if(!write)return [];p[pk][k]=[]}
   return p[pk][k];
 }
@@ -526,7 +539,7 @@ function countTxt(list){return list.length?list.filter(function(x){return x.done
 function plansHTML(v){
   var h='<aside class="plans" aria-label="计划">';
   PLANS.forEach(function(p){
-    var pk=p[0], key=periodKey(pk,v), open=isOpen(pk), list;
+    var pk=p[0], key=planKey(pk,v), open=isOpen(pk), list;
     if(pk==='life'){list=[];lifeCatsShown().forEach(function(c){list=list.concat(planList('life:'+c,v))})}
     else list=planList(pk,v);
     h+='<section class="plan'+(open?' open':'')+'"><button class="plan-h" data-act="p-fold" data-pk="'+pk+'" aria-expanded="'+open+'">'+
@@ -541,7 +554,17 @@ function plansHTML(v){
              '<span class="caret"></span><span class="sub-t">'+c+'</span><span class="plan-n">'+countTxt(sl)+'</span></button>'+
              (so?'<div class="sub-b">'+planBodyHTML(spk,c+'计划',sl)+'</div>':'')+'</div>';
         });
-      }else h+=planBodyHTML(pk,p[1],list);
+      }else{
+        if(POFF.hasOwnProperty(pk)){
+          var u={week:'周',month:'月',year:'年'}[pk], o=POFF[pk];
+          var cur=o===0?'本'+u:o===1?(pk==='year'?'明年':'下'+u):o===-1?(pk==='year'?'去年':'上'+u):(o>0?o+' '+u+'后':(-o)+' '+u+'前');
+          if(pk!=='week'&&Math.abs(o)>1)cur=(o>0?o:-o)+(pk==='month'?' 个月':' 年')+(o>0?'后':'前');
+          h+='<div class="pnav"><button data-act="p-shift" data-pk="'+pk+'" data-n="-1" aria-label="上一'+u+'">‹</button>'+
+             '<button data-act="p-shift" data-pk="'+pk+'" data-n="0" class="pnav-c'+(o?' off':'')+'" title="回到本'+u+'">'+cur+'</button>'+
+             '<button data-act="p-shift" data-pk="'+pk+'" data-n="1" aria-label="下一'+u+'">›</button></div>';
+        }
+        h+=planBodyHTML(pk,p[1],list);
+      }
       h+='</div>';
     }
     h+='</section>';
@@ -1333,6 +1356,7 @@ root.addEventListener('click',function(ev){
   if(act==='prev'||act==='next'){ui.view=addDays(v,act==='prev'?-1:1);ui.focus=false;render()}
   else if(act==='today'){ui.view=today();render()}
   else if(act==='goto'){ui.view=b.dataset.d;ui.focus=false;render()}
+  else if(act==='p-shift'){var sn=+b.dataset.n;POFF[b.dataset.pk]=sn?POFF[b.dataset.pk]+sn:0;editing=null;render()}
   else if(act==='trend'){ui.trend=+b.dataset.n;render()}
   else if(act==='tr-fold'){fold.trend=fold.trend===false;saveFold();render()}
   else if(act==='hb-fold'){fold.habits=fold.habits===false;saveFold();render()}
@@ -1414,7 +1438,7 @@ root.addEventListener('click',function(ev){
     L.forEach(function(x,k){if(x.id===id)at=k});
     if(at<0)return;
     L.splice(at,1);
-    if(!L.length&&/^(year|month|week)$/.test(pk2))delete state.plans[pk2][periodKey(pk2,v)];
+    if(!L.length&&/^(year|month|week)$/.test(pk2))delete state.plans[pk2][planKey(pk2,v)];
     ui.focus=false; toast('已删除',prevP); commit();
   }
   else if(act==='export-json'){exportJSON()}
