@@ -190,6 +190,7 @@ button{cursor:pointer;background:none;border:0;padding:0}
 body.is-dragging,body.is-dragging *{cursor:grabbing!important;user-select:none;-webkit-user-select:none}
 .ck{flex:none;width:22px;height:22px;border:1.5px solid var(--muted);border-radius:6px;position:relative;transition:background .15s,border-color .15s}
 .ck:hover{border-color:var(--green)}
+.ck.lock{opacity:.45;cursor:not-allowed}.ck.lock:hover{border-color:var(--muted)}.done .ck.lock:hover{border-color:var(--green)}
 .done .ck{background:var(--green);border-color:var(--green)}
 .done .ck::after{content:"";position:absolute;left:6.5px;top:2.5px;width:5px;height:10px;border:solid var(--card);border-width:0 2px 2px 0;transform:rotate(45deg)}
 .txt{flex:1;min-width:0;overflow-wrap:anywhere;text-align:left;padding:2px 0;cursor:text}
@@ -432,7 +433,12 @@ function pad(n){return String(n).padStart(2,'0')}
 function ds(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
 function pd(s){var p=s.split('-').map(Number);return new Date(p[0],p[1]-1,p[2])}
 function addDays(s,n){var d=pd(s);d.setDate(d.getDate()+n);return ds(d)}
-function today(){return ds(new Date())}
+/* 日期一律按北京时间（UTC+8）算，不看设备时区；CLK.off 是「可信时间 - 本机时钟」，核对过时间后才有（见「防改日期」段） */
+var BJ=8*36e5, CLK={off:null,base:0,perf:0,busy:false};
+function clkNow(){return Date.now()+(CLK.off||0)}
+function bjDay(ms){var d=new Date(ms+BJ);return d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate())}
+function bjHM(ms){var d=new Date(ms+BJ);return pad(d.getUTCHours())+':'+pad(d.getUTCMinutes())}
+function today(){return bjDay(clkNow())}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 
@@ -804,6 +810,53 @@ function csInit(){
   window.addEventListener('online',function(){if(CS.user)CS.dirty?csPush():csPull()});
 }
 
+/* ===== 防改日期：打卡前向网站服务器（GitHub Pages，国内能打开网页就能连上）要当前时间 =====
+   - 用服务器回复里的 Date（标准时间）算出北京时间的「今天」，不信本机时钟和时区。
+   - 本机时钟和服务器差超过 5 分钟：拒绝打卡，提示「设备时间异常」。
+   - 连不上服务器（没网）：拒绝打卡。
+   - 每次打卡在当天数据里记下服务器时间：days[日期].rts[习惯id]=毫秒（可选的新字段，旧数据照常打开）。
+   - 核对结果缓存最多 10 分钟；期间本机时钟一被改动（和单调计时器对不上）就重新核对。 */
+var CLK_MAX=5*60*1000;
+function clkFresh(){
+  if(CLK.off===null||!window.performance)return false;
+  var p=performance.now()-CLK.perf;
+  return p>=0&&p<10*60*1000&&Math.abs(Date.now()+CLK.off-(CLK.base+p))<3000;
+}
+function clkFetch(cb){
+  if(!window.fetch){cb(null);return}
+  var done=false, fin=function(v){if(!done){done=true;cb(v)}};
+  var ctl=window.AbortController?new AbortController():null;
+  var tm=setTimeout(function(){if(ctl)ctl.abort();fin(null)},6000);
+  var p0=window.performance?performance.now():0;
+  fetch(location.pathname+'?clk='+Date.now().toString(36)+Math.random().toString(36).slice(2,6),{method:'HEAD',cache:'no-store',signal:ctl?ctl.signal:undefined}).then(function(r){
+    clearTimeout(tm);
+    var s=Date.parse(r.headers.get('date')||'');
+    if(!(s>1.7e12)){fin(null);return}
+    var p1=window.performance?performance.now():0;
+    /* Date 只精确到秒（往下取整），所以 +500 毫秒；不超过往返时间的一半 */
+    var srv=s+Math.min(500,Math.max(0,(p1-p0)/2));
+    var dayBefore=today();
+    CLK.off=srv-Date.now(); CLK.base=srv; CLK.perf=p1;
+    if(dayBefore!==today()){if(ui.view===dayBefore)ui.view=today();ui.day=today();render()}
+    fin(srv);
+  },function(){clearTimeout(tm);fin(null)});
+}
+/* 核对时间，通过了才调用 ok(服务器时间毫秒) */
+function clkCheck(v,ok){
+  if(CLK.busy)return;
+  var go=function(srv){
+    CLK.busy=false;
+    if(srv===null){toast('没连上网，暂时不能打卡（打卡要先核对北京时间）');render();return}
+    var gap=Math.abs(CLK.off);
+    if(gap>CLK_MAX){toast('检测到设备时间异常（和北京时间差了约 '+Math.round(gap/6e4)+' 分钟），请把时间改回「自动设置」再打卡');render();return}
+    if(v!==today()){toast(v<today()?'过去的日子不能补打卡，也不能取消（断了就是断了）':'还没到那天，只能给今天打卡');render();return}
+    ok(srv);
+  };
+  if(clkFresh()){go(CLK.base+(performance.now()-CLK.perf));return}
+  CLK.busy=true; clkFetch(go);
+}
+/* ===== 防改日期 结束 ===== */
+
 /* ---------- 自动备份：写进你选的文件夹（Chrome / Edge） ---------- */
 var BK={supported:typeof window.showDirectoryPicker==='function'&&!!window.indexedDB&&!(window.claude&&window.claude.use),dir:null,name:'',status:'off',last:0,err:'',timer:0,busy:false,again:false,dirty:false};
 try{BK.last=+(localStorage.getItem('xlt-bk-last')||0)}catch(e){}
@@ -812,7 +865,7 @@ function idbDo(mode,fn){return idbOpen().then(function(db){return new Promise(fu
 function idbGet(k){return idbDo('readonly',function(st){return st.get(k)})}
 function idbSet(k,v){return idbDo('readwrite',function(st){return st.put(v,k)})}
 function idbDel(k){return idbDo('readwrite',function(st){return st.delete(k)})}
-function bkWhen(ms){if(!ms)return '';var d=new Date(ms);return (ds(d)===today()?'今天 ':(d.getMonth()+1)+'月'+d.getDate()+'日 ')+pad(d.getHours())+':'+pad(d.getMinutes())}
+function bkWhen(ms){if(!ms)return '';var k=bjDay(ms),p=k.split('-');return (k===today()?'今天 ':(+p[1])+'月'+(+p[2])+'日 ')+bjHM(ms)}
 function bkHTML(){
   if(window.claude&&window.claude.use)return '<div class="bk-st" data-s="ok"><i></i><span>在线版的改动会自动保存，手机和电脑看到的是同一份。想留一份在本地，可以点“导出备份”。</span></div>';
   if(!BK.supported)return '<div class="bk-st" data-s="off"><i></i><span>自动备份需要用 Chrome 或 Edge 打开这个文件</span></div>';
@@ -902,7 +955,7 @@ async function bkOff(){
 }
 
 /* ---------- 习惯备忘录 ---------- */
-function fmtTime(ms){if(!ms)return '';var d=new Date(ms);return ds(d)+' '+pad(d.getHours())+':'+pad(d.getMinutes())}
+function fmtTime(ms){if(!ms)return '';return bjDay(ms)+' '+bjHM(ms)}
 function noteTags(){var m={};state.notes.forEach(function(n){var t=(n.tag||'').trim();if(t)m[t]=1});return Object.keys(m).sort()}
 function filteredNotes(){
   var q=ui.q.trim().toLowerCase();
@@ -999,7 +1052,7 @@ function itemHTML(kind,x,done,star,canUp,canDown){
   var g=tKey({done:done,star:star});
   return '<li class="item'+(done?' done':'')+(star?' star':'')+'" data-kind="'+kind+'" data-id="'+esc(x.id)+'" data-g="'+g+'">'+
     '<span class="grip'+(canUp||canDown?'':' none')+'" aria-hidden="true" title="按住拖动排序">⋮⋮</span>'+
-    '<button class="ck" data-act="toggle"'+a+' aria-pressed="'+!!done+'" aria-label="'+(done?'标为未完成':'标为完成')+'"></button>'+
+    '<button class="ck'+(kind==='r'&&ui.view!==today()?' lock':'')+'" data-act="toggle"'+a+' aria-pressed="'+!!done+'" aria-label="'+(done?'标为未完成':'标为完成')+'"'+(kind==='r'&&ui.view!==today()?' title="习惯只能给今天打卡"':'')+'></button>'+
     (isEdit?'<input class="edit" id="edit-input" type="text" maxlength="200" value="'+esc(x.text)+'" aria-label="修改任务">'
            :'<button class="txt" data-act="edit"'+a+' title="点击修改">'+esc(x.text)+(kind==='r'?(GARDEN&&findRoutine(x.id)?gdIconHTML(findRoutine(x.id),ui.view,ui.gpop===x.id):'')+(function(n){return n?'<span class="rstreak'+(n>=7?' hot':'')+'" title="已连续打卡 '+n+' 天">🔥 连续 '+n+' 天</span>':''})(hbStreak(findRoutine(x.id)||x,ui.view)):'')+'</button>')+
     '<span class="ops">'+
@@ -1565,12 +1618,17 @@ root.addEventListener('click',function(ev){
   else if(act==='cs-out'){csSignOut()}
   else if(act==='toggle'){
     ui.focus=false;
-    var gr=GARDEN&&kind==='r'&&findRoutine(id), g0=gr&&gdInfo(gr,v);
-    if(kind==='r'){var D=dayW(v);if(D.rdone[id])delete D.rdone[id];else D.rdone[id]=true}
-    else{var x=findTask(id);if(!x)return;x.done=!x.done}
-    if(gr&&D.rdone[id]){ui.gpop=id;setTimeout(function(){if(ui.gpop===id)ui.gpop=null},1200)}
-    commit();
-    if(gr&&D.rdone[id]){var g1=gdInfo(gr,v);if(g1.stage>g0.stage&&g1.mood!=='dead')gdCelebrate(gr,g1,g0.name)}
+    if(kind!=='r'){var x=findTask(id);if(!x)return;x.done=!x.done;commit();return}
+    /* 每天重复的任务（习惯）：只能给「今天」打卡/取消，并且先核对北京时间（见「防改日期」段） */
+    if(clkFresh()&&v!==today()){toast(v<today()?'过去的日子不能补打卡，也不能取消（断了就是断了）':'还没到那天，只能给今天打卡');render();return}
+    clkCheck(v,function(ts){
+      var gr=GARDEN&&findRoutine(id), g0=gr&&gdInfo(gr,v), D=dayW(v);
+      if(D.rdone[id]){delete D.rdone[id];if(D.rts){delete D.rts[id];if(!Object.keys(D.rts).length)delete D.rts}}
+      else{D.rdone[id]=true;(D.rts=D.rts||{})[id]=ts}
+      if(gr&&D.rdone[id]){ui.gpop=id;setTimeout(function(){if(ui.gpop===id)ui.gpop=null},1200)}
+      commit();
+      if(gr&&D.rdone[id]){var g1=gdInfo(gr,v);if(g1.stage>g0.stage&&g1.mood!=='dead')gdCelebrate(gr,g1,g0.name)}
+    });
   }
   else if(act==='up'||act==='down'){moveItem(kind,id,act==='up'?-1:1)}
   else if(act==='star'){
@@ -1764,8 +1822,10 @@ root.addEventListener('keydown',function(ev){
 });
 document.addEventListener('visibilitychange',function(){
   if(document.hidden){if(dirty&&artifact)flush(true);if(BK.dirty&&BK.status==='ok')bkWrite();if(CS.dirty)csPush()}
-  else{if(CS.user)csPull();if(ui.day!==today()){if(ui.view===ui.day)ui.view=today();render()}}
+  else{if(CS.user)csPull();if(!clkFresh())clkFetch(function(){});if(ui.day!==today()){if(ui.view===ui.day)ui.view=today();render()}}
 });
+/* 过了北京时间零点自动翻到新的一天（正在修改文字时先不动） */
+setInterval(function(){if(!document.hidden&&!typing()&&ui.day!==today()){if(ui.view===ui.day)ui.view=today();render()}},60000);
 
 /* ---------- 启动 ---------- */
 function start(data){
@@ -1781,7 +1841,7 @@ var hot=window.claude&&window.claude.hot;
 if(hot&&hot.snapshot)hot.snapshot(function(){return ui});
 if(hot&&hot.ready)hot.ready(start);else start((hot&&hot.data)||{});
 
-bkInit(); csInit();
+bkInit(); csInit(); clkFetch(function(){});
 window.addEventListener('pagehide',function(){if(BK.dirty&&BK.status==='ok')bkWrite();if(CS.dirty)csPush()});
 if(window.claude&&window.claude.use){
   window.claude.use('artifact').then(function(a){artifact=a||null;paintStatus()},function(){artifact=null;paintStatus()});
