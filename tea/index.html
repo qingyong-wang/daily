@@ -181,6 +181,60 @@ button,input,select{font:inherit;color:inherit}
 .cs-btns{display:flex;gap:8px}.cs-btns .btn{flex:1;padding:10px}
 .cs-skip{border:0;background:transparent;color:var(--muted);font-size:13px;cursor:pointer;justify-self:center;padding:4px}
 .cs-who{font-size:14px;word-break:break-all}
+/* 经营 / 供应商 / 客户备注 */
+.biz-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:grid;gap:12px;min-width:0}
+.biz-h{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.biz-h h2{margin:0}
+.biz-h .actions{margin-left:auto}
+.biz-h .btn{padding:6px 12px;font-size:13px}
+.mnav{display:inline-flex;align-items:center;gap:4px}
+.mnav button{border:1px solid var(--line);background:transparent;border-radius:8px;width:30px;height:30px;cursor:pointer;color:var(--muted)}
+.mnav b{min-width:96px;text-align:center;font-size:15px}
+.biz-note{margin:0;font-size:13px;color:var(--muted);line-height:1.8}
+.biz-note b{color:var(--ink);font-weight:500}
+.stats.six{grid-template-columns:repeat(3,minmax(0,1fr))}
+.stat small{display:block;font-size:12px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
+.up,.stat .up{color:var(--ok)}.down,.stat .down{color:var(--bad)}
+.stat b .pf{font-size:inherit;letter-spacing:0;font-weight:700;color:var(--ok)}.stat b .pf.neg{color:var(--bad)}
+.sheet .sales li{grid-template-columns:minmax(0,1fr) auto auto auto auto;column-gap:8px}
+.sheet .log time{grid-column:1/-1}
+.biz-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.biz-box{border:1px solid var(--line);border-radius:8px;padding:10px 14px;min-width:0}
+.biz-box h3{margin:0 0 6px;font-size:14px}
+.biz-box ol,.biz-box ul{margin:0;padding-left:20px;font-size:14px;line-height:1.8}
+.biz-box .muted{font-size:13px}
+.mbars{display:block;width:100%;height:auto}
+.mbars rect.b{fill:var(--accent)}.mbars rect.b.best{fill:var(--warn)}
+.mbars text{fill:var(--muted);font-size:10px;font-family:var(--body)}
+.mbars line{stroke:var(--line)}
+.srow{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1.4fr) minmax(0,.9fr) minmax(0,.9fr);gap:14px;align-items:center;padding:12px 16px;border-top:1px solid var(--line);cursor:pointer}
+.srow:first-child{border-top:0}
+.srow:not(.hdr):hover{background:var(--sunk)}
+.srow.hdr{font-size:12px;color:var(--muted);letter-spacing:.05em;background:var(--sunk);padding-block:8px;cursor:default}
+.srow .sn{font-weight:500;min-width:0;overflow-wrap:anywhere}
+.srow small{display:block;font-size:12px;color:var(--muted);font-weight:400;overflow-wrap:anywhere}
+.srow .num{font-variant-numeric:tabular-nums}
+.owe-n{color:var(--bad)}
+.owe{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--ink);cursor:pointer}
+.owe input{width:18px;height:18px}
+.ctaste{display:block;font-size:12px;color:var(--muted);font-weight:400;margin-left:1.4em}
+.cinfo{display:grid;gap:10px;border:1px dashed var(--line);border-radius:10px;padding:10px 12px}
+.cinfo .chips .chip{font-size:12px;padding:3px 10px}
+.log .x{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 6px}
+.log .x:hover{color:var(--bad)}
+@media (max-width:620px){
+  .stats.six{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .biz-cols{grid-template-columns:1fr}
+  .srow{grid-template-columns:minmax(0,1fr) auto;gap:4px 12px}
+  .srow.hdr{display:none}
+  .srow .s-items{grid-column:1/-1;order:3}
+  .tab{padding:10px 12px}
+}
+@media print{
+  body.pbiz .head,body.pbiz .tabs,body.pbiz #p-inv,body.pbiz #p-cust,body.pbiz #p-sup,body.pbiz #bizToday,body.pbiz .biz-h .actions,body.pbiz #footNote,body.pbiz .toast,body.pbiz .scrim,body.pbiz .cs-mask{display:none!important}
+  body.pbiz #p-biz{display:grid!important}
+  body.pbiz .biz-card{border:0;padding:0}
+}
 </style>
 </head>
 <body>
@@ -202,6 +256,8 @@ button,input,select{font:inherit;color:inherit}
   <nav class="tabs" role="tablist">
     <button class="tab" role="tab" id="t-inv" aria-selected="true" data-tab="inv" type="button">库存</button>
     <button class="tab" role="tab" id="t-cust" aria-selected="false" data-tab="cust" type="button">客户</button>
+    <button class="tab" role="tab" id="t-sup" aria-selected="false" data-tab="sup" type="button">供应商</button>
+    <button class="tab" role="tab" id="t-biz" aria-selected="false" data-tab="biz" type="button">经营</button>
   </nav>
   <div class="panel" id="p-inv">
   <section class="stats" aria-label="库存概况">
@@ -264,6 +320,15 @@ button,input,select{font:inherit;color:inherit}
       <div class="log sales" id="slogBox"><ul id="slog"></ul></div>
     </section>
   </div>
+  <div class="panel" id="p-sup" hidden>
+    <section class="stats" id="supStats" aria-label="供应商概况"></section>
+    <section class="list" id="supList"></section>
+    <p class="muted" style="font-size:12px;margin:-8px 0 0">供应商来自品项里填的“供应商”，也可以点右上角新增。入库时勾选“还没付钱”，会自动记到这家的欠款里。进货额按进价估算。</p>
+  </div>
+  <div class="panel" id="p-biz" hidden>
+    <div id="bizToday"></div>
+    <div id="bizMonth"></div>
+  </div>
 </div>
 
 <div class="scrim" id="scrim" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
@@ -279,7 +344,7 @@ const isW=u=>u in WEIGHT;
 const conv=(q,from,to)=>isW(from)&&isW(to)?q*WEIGHT[from]/WEIGHT[to]:q;
 const unitChoices=u=>isW(u)?["克","斤","千克"]:[u];
 const unitSel=(id,u,sel)=>`<select id="${id}" class="usel" aria-label="单位">${unitChoices(u).map(x=>`<option ${x===(sel||u)?"selected":""}>${esc(x)}</option>`).join("")}</select>`;
-const S={cats:DEFAULT_CATS.slice(),sales:[],rate:1,tab:"inv",csort:"last",cq:"",items:[],moves:[],cat:"全部",q:"",loaded:false,db:null,canWrite:true,updatedAt:0,open:new Set()};
+const S={cinfo:{},sups:{},ap:[],rm:0,cats:DEFAULT_CATS.slice(),sales:[],rate:1,tab:"inv",csort:"last",cq:"",items:[],moves:[],cat:"全部",q:"",loaded:false,db:null,canWrite:true,updatedAt:0,open:new Set()};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const num=v=>{const n=parseFloat(v);return Number.isFinite(n)?n:0};
@@ -390,6 +455,7 @@ function moveSheet(it,type){
   <form id="mvForm" style="display:grid;gap:12px">
     <div class="field"><span id="amtLbl">数量</span><div style="display:grid;grid-template-columns:minmax(0,1fr) 96px;gap:8px"><input id="m-amt" type="number" step="any" min="0" inputmode="decimal" required aria-labelledby="amtLbl">${unitSel("m-unit",it.unit)}</div></div>
     <label class="field" id="m-costWrap">本次进货价（元/${esc(it.unit)}，选填，填了会更新这个品项的进价）<input id="m-cost" type="number" step="any" min="0" inputmode="decimal" value="${esc(it.cost??"")}"></label>
+    ${it.supplier?`<label class="owe" id="m-oweWrap"><input type="checkbox" id="m-owe"><span>这批货还没付钱，记到「${esc(it.supplier)}」的欠款</span></label>`:""}
     <label class="field">备注（选填）<input id="m-note" placeholder="如：供应商到货、报损、做活动"></label>
     <p class="preview" id="pv"></p>
     <div class="actions" style="justify-content:flex-end"><button class="btn" type="button" id="cancel">取消</button><button class="btn primary" type="submit">确认</button></div>
@@ -397,7 +463,7 @@ function moveSheet(it,type){
   let t=type;
   const amt=()=>conv(num($("m-amt").value),$("m-unit").value,it.unit);
   const upd=()=>{const a=amt();const u=$("m-unit").value;
-    $("amtLbl").textContent=t==="chk"?"实际盘点数":t==="in"?"入库数量":"出库数量";$("m-costWrap").hidden=t!=="in";
+    $("amtLbl").textContent=t==="chk"?"实际盘点数":t==="in"?"入库数量":"出库数量";$("m-costWrap").hidden=t!=="in";if($("m-oweWrap"))$("m-oweWrap").hidden=t!=="in";
     const after=t==="in"?cur+a:t==="out"?cur-a:a;
     $("pv").textContent=(u!==it.unit&&num($("m-amt").value)?`${fmt(num($("m-amt").value))} ${u} = ${fmt(a)} ${it.unit}。`:"")+`当前 ${fmt(cur)} ${it.unit} → 之后 ${fmt(after)} ${it.unit}`+(after<0?"（会变成负数，请检查）":"");
   };
@@ -411,8 +477,10 @@ function moveSheet(it,type){
     const cv=$("m-cost").value,newCost=t==="in"&&cv!==""?num(cv):null;
     const note=[u!==it.unit?`${fmt(num($("m-amt").value))}${u}`:"",newCost!=null?`进价¥${fmt(newCost)}/${it.unit}`:"",$("m-note").value.trim()].filter(Boolean).join(" · ");
     try{
+      const uc=newCost!=null?newCost:costOf(it),buy=t==="in"&&uc!=null?Math.round(a*uc*100)/100:null;
+      if(t==="in"&&it.supplier&&$("m-owe")&&$("m-owe").checked&&buy)S.ap.push({id:uid(),sup:it.supplier,type:"bill",amount:buy,note:`${it.name} 入库 ${fmt(a)}${it.unit}`,ts:Date.now()});
       updItem(it.id,newCost!=null?{qty:after,cost:newCost,updated:Date.now()}:{qty:after,updated:Date.now()});
-      addMove({itemId:it.id,itemName:it.name,unit:it.unit,type:t,delta,after,note,ts:Date.now()});
+      addMove({itemId:it.id,itemName:it.name,unit:it.unit,type:t,delta,after,note,ts:Date.now(),...(buy!=null?{amt:buy}:{})});
       closeSheet();toast(`${it.name}：现有 ${fmt(after)} ${it.unit}`)
     }catch(e){writeErr(e)}
   };
@@ -460,7 +528,7 @@ document.addEventListener("click",e=>{
   else if(a.dataset.act==="edit"&&it)itemSheet(it);
   else if(it)moveSheet(it,a.dataset.act);
 });
-$("addBtn").onclick=()=>{S.tab==="cust"?saleSheet():itemSheet(null)};
+$("addBtn").onclick=()=>{S.tab==="cust"||S.tab==="biz"?saleSheet():S.tab==="sup"?newSupSheet():itemSheet(null)};
 $("q").oninput=e=>{S.q=e.target.value;render()};
 $("clearEx").onclick=async()=>{const b=$("clearEx");if(!b.dataset.armed){b.dataset.armed=1;b.textContent="确认清除全部示例";return}
   b.disabled=true;
@@ -475,15 +543,17 @@ function invCSV(){
   const rows=[["品名","分类","库存","单位","安全库存","状态","进价","保质期至","供应商"]];
   for(const it of S.items){const {s,exp}=status(it);rows.push([it.name,it.cat,num(it.qty),it.unit,num(it.min),s[1]+(exp?"/"+exp[1]:""),it.cost,it.expiry,it.supplier])}
   return "﻿"+rows.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\n")}
-const backupJSON=()=>JSON.stringify({v:3,cats:S.cats,items:S.items,moves:S.moves,sales:S.sales,rate:S.rate,updatedAt:S.updatedAt});
+const backupJSON=()=>JSON.stringify({v:3,cats:S.cats,items:S.items,moves:S.moves,sales:S.sales,rate:S.rate,cinfo:S.cinfo,sups:S.sups,ap:S.ap,updatedAt:S.updatedAt});
 $("exportBtn").onclick=()=>{
   if(S.tab==="cust"){exportSales();return}
+  if(S.tab==="sup"){saveFile(`供应商_${stamp()}.csv`,supCSV(),"text/csv;charset=utf-8");toast("已导出到“下载”文件夹");return}
+  if(S.tab==="biz"){saveFile(`经营月报_${monthRange().label}.csv`,bizCSV(),"text/csv;charset=utf-8");toast("已导出到“下载”文件夹");return}
   saveFile(`茶店库存_${stamp()}.csv`,invCSV(),"text/csv;charset=utf-8");toast("已导出表格到“下载”文件夹");
 };
 $("backupBtn").onclick=()=>{saveFile(`茶店库存备份_${stamp()}.json`,backupJSON(),"application/json");toast("备份已保存到“下载”文件夹")};
 $("restoreBtn").onclick=()=>$("restoreFile").click();
 $("restoreFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
-  r.onload=()=>{try{const d=JSON.parse(r.result);if(!Array.isArray(d.items))throw 0;S.items=d.items;S.moves=Array.isArray(d.moves)?d.moves:[];S.sales=Array.isArray(d.sales)?d.sales:[];S.rate=num(d.rate)||1;if(Array.isArray(d.cats)&&d.cats.length)S.cats=d.cats;persist();renderCats();render();renderLog();renderCust();toast(`已恢复 ${S.items.length} 个品项`)}catch(_){toast("这个文件不是本系统的备份")}e.target.value=""};
+  r.onload=()=>{try{const d=JSON.parse(r.result);if(!Array.isArray(d.items))throw 0;S.items=d.items;S.moves=Array.isArray(d.moves)?d.moves:[];S.sales=Array.isArray(d.sales)?d.sales:[];S.rate=num(d.rate)||1;S.cinfo=objOr(d.cinfo);S.sups=objOr(d.sups);S.ap=Array.isArray(d.ap)?d.ap:[];if(Array.isArray(d.cats)&&d.cats.length)S.cats=d.cats;persist();renderCats();render();renderLog();renderCust();toast(`已恢复 ${S.items.length} 个品项`)}catch(_){toast("这个文件不是本系统的备份")}e.target.value=""};
   r.readAsText(f)};
 
 
@@ -520,13 +590,13 @@ function renderCust(){
   {let pf=0,pend=0,miss=0;for(const x of month){const v=saleProfit(x);if(!hasPrice(x))pend++;else if(v==null)miss++;else pf+=v}
    $("cProfit").textContent=fmt(pf);$("cProfitL").textContent="本月利润（元）"+(pend?` · ${pend} 笔待填售价`:"")+(miss?` · ${miss} 笔缺成本`:"")}$("cPts").textContent=fmt(cs.reduce((a,c)=>a+c.pts,0));
   const q=S.cq.trim().toLowerCase();
-  const vis=cs.filter(c=>!q||c.name.toLowerCase().includes(q)||[...c.products.keys()].some(p=>p.toLowerCase().includes(q)))
+  const vis=cs.filter(c=>{if(!q)return true;const ci=S.cinfo[c.name]||{};return c.name.toLowerCase().includes(q)||[...c.products.keys()].some(p=>p.toLowerCase().includes(q))||[ci.phone,ci.taste,ci.note].join(" ").toLowerCase().includes(q)})
     .sort((a,b)=>S.csort==="sum"?b.sum-a.sum:S.csort==="profit"?b.profit-a.profit:S.csort==="qty"?b.qty-a.qty:S.csort==="pts"?b.pts-a.pts:b.last-a.last);
   const L=$("clist");
   if(!cs.length){L.innerHTML=`<div class="empty"><p>还没有客户消费记录。客户买单后点“记一笔消费”，填上客户名称、买了什么、多少钱，积分会按规则自动算好。</p><button class="btn primary" type="button" data-sale="new">＋ 记一笔消费</button></div>`}
   else if(!vis.length){L.innerHTML=`<div class="empty"><p>没有找到匹配的客户。</p></div>`}
   else L.innerHTML=`<div class="crow hdr"><span>客户名称</span><span>累计消费</span><span>累计利润</span><span>次数</span><span>消费数量</span><span>积分</span><span>最近消费</span></div>`+vis.map(c=>{const open=S.open.has(c.name);return `<div class="crow fold" data-fold="${esc(c.name)}" aria-expanded="${open}">
-    <span class="cn"><span class="chev">▶</span>${esc(c.name)}</span>
+    <span class="cn"><span class="chev">▶</span>${esc(c.name)}${(S.cinfo[c.name]||{}).taste?`<small class="ctaste">口味：${esc(S.cinfo[c.name].taste)}</small>`:""}</span>
     <span class="c-sum">¥${fmt(c.sum)}</span><span class="c-pf">${pfHtml(c.profit)}${c.pend?` <span class="pend">${c.pend}笔待填</span>`:""}</span><span class="c-n">${c.n} 次</span><span class="c-q">${fmt(c.qty)}</span>
     <span class="c-pts"><span class="pts">${fmt(c.pts)}</span> 分</span><span class="c-last">${ymd(c.last)} ${hm(c.last)}</span></div>`+(open?foldHtml(c.name):"")}).join("");
   const sl=q?S.sales.filter(x=>x.customer.toLowerCase().includes(q)||String(x.products||"").toLowerCase().includes(q)):S.sales;
@@ -638,7 +708,7 @@ function saleSheet(name){
     const a=$("s-amt").value;$("s-pf").textContent=`成本合计 ¥${fmt(c)}`+(miss?`（有 ${miss} 样没有进价）`:"")+(a===""?" · 售价填了以后自动算利润":` · 利润 ¥${fmt(num(a)-c*COSTX)}（售价 − 成本×${COSTX}）`)};
   let touched=false;
   const pv=()=>{const nm=$("s-name").value.trim();const c=customers().find(c=>c.name===nm);
-    $("s-pv").textContent=c?`${nm}：已消费 ${c.n} 次，累计 ¥${fmt(c.sum)}，现有 ${fmt(c.pts)} 分`:(nm?"新客户，保存后自动建档":"")};
+    const ci=S.cinfo[nm]||{};$("s-pv").textContent=c?`${nm}：已消费 ${c.n} 次，累计 ¥${fmt(c.sum)}，现有 ${fmt(c.pts)} 分`+(ci.taste?` · 口味：${ci.taste}`:"")+(ci.note?` · 备注：${ci.note}`:""):(nm?"新客户，保存后自动建档":"")};
   $("s-amt").oninput=()=>{if(!touched)$("s-pts").value=$("s-amt").value===""?"":Math.floor(num($("s-amt").value)*S.rate);pf()};
   $("s-pts").oninput=()=>touched=true;
   $("s-name").oninput=pv;pv();
@@ -701,6 +771,7 @@ function custSheet(name){
     <div class="stat"><b class="pts">${fmt(c.pts)}</b><span>现有积分</span></div>
   </div>
   <p class="preview" style="margin:0">常买：${top} · 消费数量 ${fmt(c.qty)}<br>客单价 ¥${c.n?fmt(c.sum/c.n):0} · 最近消费 ${ymd(c.last)} ${hm(c.last)}</p>
+  ${cinfoForm(name)}
   <form id="redeemForm" class="actions" style="align-items:end">
     <label class="field" style="flex:1 1 120px">兑换扣积分<input id="r-pts" type="number" min="1" step="any" inputmode="decimal" placeholder="分数"></label>
     <label class="field" style="flex:2 1 160px">兑换内容<input id="r-what" placeholder="如：免费小杯一杯"></label>
@@ -713,9 +784,10 @@ function custSheet(name){
   </div>`);
   $("cancel").onclick=closeSheet;
   $("moreSale").onclick=()=>saleSheet(name);
+  cinfoBind(name);
   $("renameBtn").onclick=()=>{const b=$("renameBtn");if(b.dataset.on)return;b.dataset.on=1;
     b.outerHTML=`<span class="actions"><input id="rn" class="search" style="flex:0 1 160px" value="${esc(name)}"><button class="btn" type="button" id="rnOk">保存名称</button></span>`;
-    $("rnOk").onclick=()=>{const nn=$("rn").value.trim();if(!nn||nn===name)return;S.sales.forEach(x=>{if(x.customer===name)x.customer=nn});saveSales();custSheet(nn);toast("已改名为 "+nn)}};
+    $("rnOk").onclick=()=>{const nn=$("rn").value.trim();if(!nn||nn===name)return;S.sales.forEach(x=>{if(x.customer===name)x.customer=nn});if(S.cinfo[name]){S.cinfo[nn]=Object.assign({},S.cinfo[name],S.cinfo[nn]||{});delete S.cinfo[name]}saveSales();custSheet(nn);toast("已改名为 "+nn)}};
   $("redeemForm").onsubmit=ev=>{ev.preventDefault();const p=num($("r-pts").value);if(p<=0)return;
     if(p>c.pts){toast(`积分不够，现有 ${fmt(c.pts)} 分`);return}
     S.sales.push({id:uid(),type:"redeem",customer:name,products:"积分兑换"+($("r-what").value.trim()?"："+$("r-what").value.trim():""),amount:0,points:-p,note:"",ts:Date.now()});
@@ -734,15 +806,17 @@ function rateSheet(){
 function salesCSV(){
   const rows=[["消费时间","客户名称","购买产品","消费数量","售价（元）","进货成本（元）","利润（元，售价−成本×1.1）","积分变动","类型","备注"]];
   for(const x of S.sales)rows.push([`${ymd(x.ts)} ${hm(x.ts)}`,x.customer,x.type==="redeem"?x.products:linesText(saleLines(x)),x.type==="redeem"?"":fmt(saleQty(x)),x.type==="redeem"?"":hasPrice(x)?num(x.amount):"待填",x.type==="redeem"?"":(saleCost(x).miss?"缺":fmt(saleCost(x).c)),saleProfit(x)==null?"":fmt(saleProfit(x)),num(x.points),x.type==="redeem"?"积分兑换":"消费",x.note]);
-  rows.push([]);rows.push(["客户名称","累计消费（元）","累计利润（元）","消费次数","消费数量","现有积分","最近消费"]);
-  for(const c of customers().sort((a,b)=>b.sum-a.sum))rows.push([c.name,fmt(c.sum),fmt(c.profit),c.n,fmt(c.qty),c.pts,`${ymd(c.last)} ${hm(c.last)}`]);
+  rows.push([]);rows.push(["客户名称","累计消费（元）","累计利润（元）","消费次数","消费数量","现有积分","最近消费","电话","口味","备注"]);
+  for(const c of customers().sort((a,b)=>b.sum-a.sum)){const ci=S.cinfo[c.name]||{};rows.push([c.name,fmt(c.sum),fmt(c.profit),c.n,fmt(c.qty),c.pts,`${ymd(c.last)} ${hm(c.last)}`,ci.phone,ci.taste,ci.note])}
   return "﻿"+rows.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\n")}
 function exportSales(){saveFile(`客户消费_${stamp()}.csv`,salesCSV(),"text/csv;charset=utf-8");toast("已导出到“下载”文件夹")}
-function setTab(t){S.tab=t;$("p-inv").hidden=t!=="inv";$("p-cust").hidden=t!=="cust";
-  $("t-inv").setAttribute("aria-selected",t==="inv");$("t-cust").setAttribute("aria-selected",t==="cust");
-  $("addBtn").textContent=t==="cust"?"＋ 记一笔消费":"＋ 新增品项";$("exportBtn").textContent=t==="cust"?"导出消费记录":"导出表格";
-  $("sub").textContent=t==="cust"?"点客户那一行展开消费记录 · "+where():"点品名编辑 · 入库/出库/盘点自动记录 · "+where();
-  if(t==="cust")renderCust();try{localStorage.setItem(KEY+"-tab",t)}catch(e){}}
+const TABS=["inv","cust","sup","biz"];
+function subTxt(){return {cust:"点客户那一行展开消费记录 · ",sup:"点供应商看欠款、记还款 · ",biz:"今天卖得怎么样、每月经营报告 · "}[S.tab]||"点品名编辑 · 入库/出库/盘点自动记录 · "}
+function setTab(t){if(!TABS.includes(t))t="inv";S.tab=t;TABS.forEach(k=>{$("p-"+k).hidden=t!==k;$("t-"+k).setAttribute("aria-selected",t===k)});
+  $("addBtn").textContent={cust:"＋ 记一笔消费",sup:"＋ 新增供应商",biz:"＋ 记一笔消费"}[t]||"＋ 新增品项";
+  $("exportBtn").textContent={cust:"导出消费记录",sup:"导出供应商表",biz:"导出本月报表"}[t]||"导出表格";
+  $("sub").textContent=subTxt()+where();
+  if(t==="cust")renderCust();renderExtra();try{localStorage.setItem(KEY+"-tab",t)}catch(e){}}
 document.addEventListener("click",e=>{
   const tb=e.target.closest("[data-tab]");if(tb){setTab(tb.dataset.tab);return}
   const so=e.target.closest("[data-sort]");if(so){S.csort=so.dataset.sort;document.querySelectorAll("[data-sort]").forEach(b=>b.setAttribute("aria-pressed",b===so));renderCust();return}
@@ -774,11 +848,12 @@ try{if(localStorage.getItem("tea-shop-inventory-v1-slog2")==="0"){$("slogBox").h
 /* ---------- data (saved in this browser) ---------- */
 const KEY="tea-shop-inventory-v1";
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-function snap(){return {cats:S.cats,items:S.items,moves:S.moves.slice(0,2000),sales:S.sales,rate:S.rate,updatedAt:S.updatedAt}}
+function snap(){return {cats:S.cats,items:S.items,moves:S.moves.slice(0,2000),sales:S.sales,rate:S.rate,cinfo:S.cinfo,sups:S.sups,ap:S.ap,updatedAt:S.updatedAt}}
 /* persist(true) = 只存本机、不算一次修改（例如载入示例、收到云端数据） */
-function persist(quiet){if(!quiet)S.updatedAt=Date.now();localStorage.setItem(KEY,JSON.stringify(snap()));if(!quiet)csSchedule();if(S.updatedAt)bkSchedule()}
-function applyData(d){S.items=d.items||[];S.moves=d.moves||[];S.sales=d.sales||[];S.rate=num(d.rate)||1;S.updatedAt=num(d.updatedAt);if(Array.isArray(d.cats)&&d.cats.length)S.cats=d.cats}
-function rerender(){renderCats();render();renderLog();renderCust()}
+function persist(quiet){if(!quiet)S.updatedAt=Date.now();localStorage.setItem(KEY,JSON.stringify(snap()));if(!quiet)csSchedule();if(S.updatedAt)bkSchedule();if(S.loaded)setTimeout(renderExtra,0)}
+const objOr=v=>v&&typeof v==="object"&&!Array.isArray(v)?v:{};
+function applyData(d){S.items=d.items||[];S.moves=d.moves||[];S.sales=d.sales||[];S.rate=num(d.rate)||1;S.cinfo=objOr(d.cinfo);S.sups=objOr(d.sups);S.ap=Array.isArray(d.ap)?d.ap:[];S.updatedAt=num(d.updatedAt);if(Array.isArray(d.cats)&&d.cats.length)S.cats=d.cats}
+function rerender(){renderCats();render();renderLog();renderCust();renderExtra()}
 function commit(){persist();render();renderLog()}
 function addItem(body){const it={id:uid(),...body};S.items.push(it);commit();return it}
 function updItem(id,patch){const it=S.items.find(i=>i.id===id);if(it)Object.assign(it,patch);commit()}
@@ -800,7 +875,7 @@ function where(){return CS.on&&CS.user?"数据已云同步":"数据保存在本�
 function csInfo(){if(!CS.ready)return["busy","连接中…"];if(!CS.user)return["off","未登录"];if(CS.failed)return["bad","同步失败"];if(CS.busy||CS.dirty)return["busy","同步中…"];return["ok","已同步"]}
 function csPaint(){if(!CS.on)return;const b=$("csBtn"),i=csInfo();b.hidden=false;b.dataset.s=i[0];b.querySelector("span").textContent="云同步："+i[1];
   $("footNote").textContent=CS.user?"已登录云同步（"+CS.user.email+"）：改动会自动上传，手机和电脑看到的是同一份。仍建议每月点一次“备份”留底。":"现在数据只存在这台设备的浏览器里。点上面的“云同步”登录后，手机和电脑就能共用一份数据。";
-  if(S.loaded)$("sub").textContent=(S.tab==="cust"?"点客户那一行展开消费记录 · ":"点品名编辑 · 入库/出库/盘点自动记录 · ")+where()}
+  if(S.loaded)$("sub").textContent=subTxt()+where()}
 function csSchedule(){if(!CS.on||!CS.user)return;CS.dirty=true;CS.failed=false;clearTimeout(CS.timer);CS.timer=setTimeout(csPush,1500);csPaint()}
 function csPush(){clearTimeout(CS.timer);if(!CS.user||!CS.dirty)return;if(CS.busy){CS.again=true;return}
   CS.busy=true;CS.dirty=false;csPaint();
@@ -915,13 +990,172 @@ async function bkInit(){if(!BK.supported){bkPaint();return}$("bkBtn").onclick=bk
   catch(e){BK.status="err";BK.err=String(e&&e.message||e)}
   bkPaint();if(BK.status==="ok"&&S.updatedAt)bkSchedule(800)}
 
+/* ---------- 客户口味 / 备注 ---------- */
+const TASTES=["少糖","半糖","无糖","少冰","去冰","常温","热饮","加奶盖","加珍珠"];
+function cinfoForm(name){const ci=S.cinfo[name]||{};
+  return `<form id="cinfoForm" class="cinfo"><div class="grid2"><label class="field">电话 / 微信<input id="ci-phone" value="${esc(ci.phone)}" placeholder="选填"></label><label class="field">口味偏好<input id="ci-taste" value="${esc(ci.taste)}" placeholder="如：少糖、去冰、喜欢乌龙"></label></div>
+  <div class="chips" id="ci-quick">${TASTES.map(t=>`<button class="chip" type="button" data-taste="${t}" aria-pressed="${(ci.taste||"").split(/[、,，\s]+/).includes(t)}">${t}</button>`).join("")}</div>
+  <label class="field">备注<input id="ci-note" value="${esc(ci.note)}" placeholder="如：生日 5月20日、在附近上班、喜欢尝新品"></label>
+  <div class="actions" style="justify-content:flex-end"><button class="btn" type="submit">保存口味和备注</button></div></form>`}
+function cinfoBind(name){
+  $("ci-quick").onclick=e=>{const b=e.target.closest("[data-taste]");if(!b)return;const t=b.dataset.taste;
+    let arr=$("ci-taste").value.split(/[、,，\s]+/).filter(Boolean);arr=arr.includes(t)?arr.filter(x=>x!==t):[...arr,t];
+    $("ci-taste").value=arr.join("、");b.setAttribute("aria-pressed",arr.includes(t))};
+  $("cinfoForm").onsubmit=ev=>{ev.preventDefault();const v={phone:$("ci-phone").value.trim(),taste:$("ci-taste").value.trim(),note:$("ci-note").value.trim()};
+    if(v.phone||v.taste||v.note)S.cinfo[name]=v;else delete S.cinfo[name];persist();renderCust();toast("已保存 "+name+" 的口味和备注")}}
+
+/* ---------- 供应商和欠款 ---------- */
+function supNames(){return [...new Set([...S.items.map(i=>(i.supplier||"").trim()),...Object.keys(S.sups),...S.ap.map(x=>x.sup)].filter(Boolean))]}
+function supBal(n){return Math.round(S.ap.filter(x=>x.sup===n).reduce((a,x)=>a+(x.type==="pay"?-1:1)*num(x.amount),0)*100)/100}
+function buyAmt(m){if(m.type!=="in"||!(m.delta>0))return 0;if(m.amt!=null)return num(m.amt);const it=S.items.find(i=>i.id===m.itemId);const c=costOf(it);return c==null?0:m.delta*c}
+function supBuy(n,lo,hi){const ids=new Set(S.items.filter(i=>i.supplier===n).map(i=>i.id));return S.moves.reduce((a,m)=>a+(ids.has(m.itemId)&&m.ts>=lo&&m.ts<hi?buyAmt(m):0),0)}
+function monthLo(){const d=new Date();return +new Date(d.getFullYear(),d.getMonth(),1)}
+function renderSup(){if(!$("supList"))return;
+  const lo=monthLo(),hi=Date.now()+1;
+  const rows=supNames().map(n=>({n,bal:supBal(n),buy:supBuy(n,lo,hi),items:S.items.filter(i=>i.supplier===n),info:S.sups[n]||{}}))
+    .sort((a,b)=>b.bal-a.bal||b.buy-a.buy||a.n.localeCompare(b.n,"zh"));
+  const owe=rows.reduce((a,r)=>a+Math.max(0,r.bal),0);
+  $("supStats").innerHTML=`<div class="stat"><b>${rows.length}</b><span>供应商</span></div><div class="stat alert"><b>¥${fmt(owe)}</b><span>欠款合计</span></div>
+    <div class="stat"><b>${rows.filter(r=>r.bal>0).length}</b><span>有欠款的家数</span></div><div class="stat"><b>¥${fmt(rows.reduce((a,r)=>a+r.buy,0))}</b><span>本月进货（估算）</span></div>`;
+  $("supList").innerHTML=rows.length?`<div class="srow hdr"><span>供应商</span><span>供应的货</span><span>本月进货</span><span>还欠</span></div>`+rows.map(r=>`<div class="srow" data-sup="${esc(r.n)}">
+    <span class="sn">${esc(r.n)}${r.info.phone||r.info.contact?`<small>${esc([r.info.contact,r.info.phone].filter(Boolean).join(" · "))}</small>`:""}${r.info.note?`<small>${esc(r.info.note)}</small>`:""}</span>
+    <span class="s-items muted" style="font-size:13px">${r.items.length?esc(r.items.map(i=>i.name).join("、")):"—"}</span>
+    <span class="num">¥${fmt(r.buy)}</span><span class="num ${r.bal>0?"owe-n":""}" style="font-weight:600">${r.bal>0?"¥"+fmt(r.bal):r.bal<0?"多付 ¥"+fmt(-r.bal):"已结清"}</span></div>`).join("")
+    :`<div class="empty"><p>还没有供应商。在品项里填上“供应商”，或点右上角“新增供应商”。</p><button class="btn primary" type="button" data-newsup="1">＋ 新增供应商</button></div>`}
+function newSupSheet(){
+  openSheet(`<h2>新增供应商</h2><form id="nsForm" style="display:grid;gap:12px"><label class="field">供应商名称<input id="ns-name" required placeholder="如：福建茶叶批发王老板"></label>
+  <div class="actions" style="justify-content:flex-end"><button class="btn" type="button" id="cancel">取消</button><button class="btn primary" type="submit">下一步</button></div></form>`);
+  $("cancel").onclick=closeSheet;
+  $("nsForm").onsubmit=ev=>{ev.preventDefault();const n=$("ns-name").value.trim();if(!n)return;S.sups[n]=S.sups[n]||{};persist();supSheet(n)}}
+function supSheet(name){
+  const info=S.sups[name]||{},items=S.items.filter(i=>i.supplier===name),bal=supBal(name);
+  const led=S.ap.filter(x=>x.sup===name).sort((a,b)=>b.ts-a.ts);
+  openSheet(`<h2>${esc(name)}</h2>
+  <div class="stats" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div class="stat"><b class="${bal>0?"owe-n":""}">¥${fmt(Math.abs(bal))}</b><span>${bal<0?"多付了":"还欠"}</span></div><div class="stat"><b>¥${fmt(supBuy(name,monthLo(),Date.now()+1))}</b><span>本月进货（估算）</span></div></div>
+  <form id="apForm" style="display:grid;gap:8px"><div class="actions" style="align-items:end">
+    <label class="field" style="flex:1 1 110px">金额（元）<input id="ap-amt" type="number" step="0.01" min="0" inputmode="decimal" required></label>
+    <label class="field" style="flex:2 1 150px">说明（选填）<input id="ap-note" placeholder="如：11月茶叶货款"></label></div>
+    <div class="actions" style="justify-content:flex-end"><button class="btn" type="submit" data-k="bill">＋ 记一笔欠款</button><button class="btn primary" type="submit" data-k="pay">记一笔还款</button></div></form>
+  <div class="log" style="max-height:220px;overflow:auto"><ul>${led.length?led.map(x=>`<li><time>${ymd(x.ts)}</time><span>${x.type==="pay"?"还款":"欠款"}${x.note?` <span class="note">${esc(x.note)}</span>`:""}</span><span class="d ${x.type==="pay"?"in":"out"}">${x.type==="pay"?"−":"+"}¥${fmt(num(x.amount))}<button class="x" type="button" data-apdel="${x.id}">删除</button></span></li>`).join("")
+    :`<li><span class="muted" style="grid-column:1/-1">还没有欠款记录。入库时勾选“还没付钱”，或在上面直接记一笔。</span></li>`}</ul></div>
+  <form id="spInfo" class="cinfo"><div class="grid2"><label class="field">联系人<input id="sp-c" value="${esc(info.contact)}" placeholder="选填"></label><label class="field">电话 / 微信<input id="sp-p" value="${esc(info.phone)}" placeholder="选填"></label></div>
+    <label class="field">备注<input id="sp-n" value="${esc(info.note)}" placeholder="如：每周二送货、满 500 免运费、月结"></label>
+    <p class="preview" style="margin:0">供应的货：${items.length?items.map(i=>`${esc(i.name)}${costOf(i)!=null?`（¥${fmt(costOf(i))}/${esc(i.unit)}）`:""}`).join("、"):"还没有品项填这个供应商。在品项的“供应商”里填上这个名字就会关联。"}</p>
+    <div class="actions" style="justify-content:flex-end"><button class="btn" type="submit">保存信息</button></div></form>
+  <div class="actions" style="justify-content:space-between"><button class="btn" type="button" id="spRename">改名</button><button class="btn" type="button" id="cancel">关闭</button></div>`);
+  $("cancel").onclick=closeSheet;
+  $("apForm").onsubmit=ev=>{ev.preventDefault();const k=(ev.submitter&&ev.submitter.dataset.k)||"bill",a=Math.round(num($("ap-amt").value)*100)/100;if(a<=0)return;
+    S.ap.push({id:uid(),sup:name,type:k,amount:a,note:$("ap-note").value.trim(),ts:Date.now()});persist();supSheet(name);
+    const nb=supBal(name);toast(k==="pay"?`已记还款 ¥${fmt(a)}，${nb>0?"还欠 ¥"+fmt(nb):"已结清"}`:`已记欠款 ¥${fmt(a)}，共欠 ¥${fmt(nb)}`)};
+  $("sheet").querySelectorAll("[data-apdel]").forEach(b=>b.onclick=()=>{if(!b.dataset.armed){b.dataset.armed=1;b.textContent="确认删除";return}
+    S.ap=S.ap.filter(x=>x.id!==b.dataset.apdel);persist();supSheet(name);toast("已删除这条记录")});
+  $("spInfo").onsubmit=ev=>{ev.preventDefault();S.sups[name]={contact:$("sp-c").value.trim(),phone:$("sp-p").value.trim(),note:$("sp-n").value.trim()};persist();toast("已保存")};
+  $("spRename").onclick=()=>{const b=$("spRename");if(b.dataset.on)return;b.dataset.on=1;
+    b.outerHTML=`<span class="actions"><input id="spn" class="search" style="flex:0 1 170px" value="${esc(name)}"><button class="btn" type="button" id="spnOk">保存名称</button></span>`;
+    $("spnOk").onclick=()=>{const nn=$("spn").value.trim();if(!nn||nn===name)return;
+      S.items.forEach(i=>{if(i.supplier===name)i.supplier=nn});S.ap.forEach(x=>{if(x.sup===name)x.sup=nn});
+      if(S.sups[name]){S.sups[nn]=Object.assign({},S.sups[name],S.sups[nn]||{});delete S.sups[name]}
+      persist();render();supSheet(nn);toast("已改名为 "+nn)}}}
+function supCSV(){const lo=monthLo(),hi=Date.now()+1;
+  const rows=[["供应商","联系人","电话/微信","备注","供应的货","本月进货（估算，元）","还欠（元）"]];
+  for(const n of supNames()){const i=S.sups[n]||{};rows.push([n,i.contact,i.phone,i.note,S.items.filter(t=>t.supplier===n).map(t=>t.name).join("、"),fmt(supBuy(n,lo,hi)),fmt(supBal(n))])}
+  rows.push([]);rows.push(["日期","供应商","类型","金额（元）","说明"]);
+  for(const x of S.ap.slice().sort((a,b)=>b.ts-a.ts))rows.push([ymd(x.ts),x.sup,x.type==="pay"?"还款":"欠款",num(x.amount),x.note]);
+  return "﻿"+rows.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\n")}
+
+/* ---------- 经营：今日小结 + 月度报告 ---------- */
+const WDN="日一二三四五六";
+function pctHtml(a,b){if(!(b>0))return a>0?`<span class="up">↑ 新增</span>`:`<span class="muted">持平</span>`;const r=(a-b)/b*100;
+  return Math.abs(r)<0.5?`<span class="muted">持平</span>`:`<span class="${r>0?"up":"down"}">${r>0?"↑":"↓"} ${fmt(Math.abs(Math.round(r)))}%</span>`}
+const pctTxt=(a,b)=>!(b>0)?(a>0?"新增":"持平"):(Math.abs((a-b)/b*100)<0.5?"持平":((a>b?"涨 ":"跌 ")+fmt(Math.abs(Math.round((a-b)/b*100)))+"%"));
+function firstBuy(){const f=new Map();for(const x of S.sales){if(x.type==="redeem")continue;const v=f.get(x.customer);if(v==null||x.ts<v)f.set(x.customer,x.ts)}return f}
+function bizSum(lo,hi,fb){fb=fb||firstBuy();
+  let sum=0,n=0,pf=0,miss=0,pend=0;const cust=new Map(),prod=new Map();
+  for(const x of S.sales){if(x.type==="redeem"||x.ts<lo||x.ts>=hi)continue;n++;
+    if(!hasPrice(x))pend++;else{sum+=num(x.amount);const v=saleProfit(x);v==null?miss++:pf+=v}
+    cust.set(x.customer,(cust.get(x.customer)||0)+(hasPrice(x)?num(x.amount):0));
+    for(const l of saleLines(x)){const p=prod.get(l.name)||{q:0,u:l.unit||"",n:0};p.q+=l.qty==null?1:num(l.qty);p.n++;prod.set(l.name,p)}}
+  let fresh=0;for(const c of cust.keys()){const f=fb.get(c);if(f>=lo&&f<hi)fresh++}
+  const paid=n-pend;
+  return{sum,n,pf,miss,pend,paid,avg:paid?sum/paid:0,cust:cust.size,fresh,custMap:cust,prod}}
+const topProds=(m,k)=>[...m.prod.entries()].sort((a,b)=>b[1].n-a[1].n||b[1].q-a[1].q).slice(0,k);
+function lowItems(){return S.items.filter(i=>{const st=status(i);return st.s[0]!=="ok"||st.exp})}
+function todayData(){const t=+today(),D=864e5,fb=firstBuy();return{t,a:bizSum(t,t+D,fb),y:bizSum(t-D,t,fb),w:bizSum(t-7*D,t-6*D,fb)}}
+function todayHtml(){const {t,a,y,w}=todayData(),d=new Date(t),low=lowItems();
+  const top=topProds(a,5).map(([k,p])=>`${esc(k)}×${fmt(p.q)}${esc(p.u)}`).join("、");
+  return `<section class="biz-card"><div class="biz-h"><h2>今日营业小结</h2><span class="muted">${d.getMonth()+1}月${d.getDate()}日 周${WDN[d.getDay()]}</span><div class="actions"><button class="btn" type="button" id="copyToday">复制小结</button></div></div>
+  <div class="stats"><div class="stat"><b>¥${fmt(a.sum)}</b><span>营业额</span><small>比昨天 ${pctHtml(a.sum,y.sum)}</small></div>
+    <div class="stat"><b>${pfHtml(a.pf)}</b><span>利润</span><small>${a.miss?a.miss+" 笔缺成本未计":"昨天 ¥"+fmt(y.pf)}</small></div>
+    <div class="stat"><b>${a.n}</b><span>单数</span><small>昨天 ${y.n} 单 · 客单价 ¥${fmt(Math.round(a.avg*100)/100)}</small></div>
+    <div class="stat"><b>${a.cust}</b><span>来客</span><small>新客 ${a.fresh} · 老客 ${a.cust-a.fresh}</small></div></div>
+  <p class="biz-note">上周${WDN[d.getDay()]}：¥${fmt(w.sum)}${a.n?`，今天 ${pctHtml(a.sum,w.sum)}`:""}${top?`<br>今天卖得最多：<b>${top}</b>`:"<br>今天还没有消费记录"}${a.pend?`<br><span class="pend">有 ${a.pend} 笔还没填售价，填好后营业额和利润才准</span>`:""}${low.length?`<br>库存提醒：<b>${low.length}</b> 样缺货 / 偏低 / 临期（${esc(low.slice(0,4).map(i=>i.name).join("、"))}${low.length>4?"…":""}），去「库存」看看`:""}</p></section>`}
+function todayText(){const {t,a,y}=todayData(),d=new Date(t);const top=topProds(a,5).map(([k,p])=>`${k}×${fmt(p.q)}${p.u}`).join("、");
+  return `【${d.getMonth()+1}月${d.getDate()}日 营业小结】\n营业额：¥${fmt(a.sum)}（比昨天${pctTxt(a.sum,y.sum)}）\n利润：¥${fmt(a.pf)}\n单数：${a.n} 单，客单价 ¥${fmt(Math.round(a.avg*100)/100)}\n来客：${a.cust} 位（新客 ${a.fresh}）`+(top?`\n卖得最多：${top}`:"")+(a.pend?`\n还有 ${a.pend} 笔待填售价`:"")}
+function monthRange(off){off=off==null?S.rm:off;const n=new Date(),a=new Date(n.getFullYear(),n.getMonth()+off,1),b=new Date(a.getFullYear(),a.getMonth()+1,1);
+  return{a:+a,b:+b,y:a.getFullYear(),m:a.getMonth()+1,days:Math.round((b-a)/864e5),label:`${a.getFullYear()}年${a.getMonth()+1}月`}}
+function monthData(){const r=monthRange(),pr=monthRange(S.rm-1),fb=firstBuy(),m=bizSum(r.a,r.b,fb),pm=bizSum(pr.a,pr.b,fb);
+  const daily=Array.from({length:r.days},()=>0),dn=Array.from({length:r.days},()=>0);
+  for(const x of S.sales){if(x.type==="redeem"||x.ts<r.a||x.ts>=r.b)continue;const i=new Date(x.ts).getDate()-1;dn[i]++;if(hasPrice(x))daily[i]+=num(x.amount)}
+  let buy=0,loss=0;for(const mv of S.moves){if(mv.ts<r.a||mv.ts>=r.b)continue;buy+=buyAmt(mv);
+    if(mv.delta<0&&!mv.saleId&&!/^销售/.test(mv.note||"")){const it=S.items.find(i=>i.id===mv.itemId),c=costOf(it);if(c!=null)loss+=-mv.delta*c}}
+  let pbuy=0;for(const mv of S.moves)if(mv.ts>=pr.a&&mv.ts<pr.b)pbuy+=buyAmt(mv);
+  const best=daily.reduce((bi,v,i)=>v>daily[bi]?i:bi,0);
+  return{r,pr,m,pm,daily,dn,buy,pbuy,loss,best}}
+function barsSvg(daily,best,y,mo){const W=620,H=130,L=30,T=8,B=20,pw=W-L-6,ph=H-T-B,max=niceMax(Math.max(...daily)),step=pw/daily.length,bw=Math.max(2,step-3);
+  let g=`<line x1="${L}" x2="${W-6}" y1="${T+ph}" y2="${T+ph}"/><text x="${L-4}" y="${T+8}" text-anchor="end">${max>=10000?fmt(max/10000)+"万":fmt(max)}</text>`;
+  daily.forEach((v,i)=>{const h=v/max*ph,x=L+i*step+(step-bw)/2;if(v>0)g+=`<rect class="b${i===best&&v>0?" best":""}" x="${x}" y="${T+ph-h}" width="${bw}" height="${Math.max(h,1)}" rx="1.5"><title>${mo}月${i+1}日 ¥${fmt(v)}</title></rect>`;
+    if(i===0||(i+1)%5===0)g+=`<text x="${L+i*step+step/2}" y="${H-5}" text-anchor="middle">${i+1}</text>`});
+  return `<svg class="mbars" viewBox="0 0 ${W} ${H}" role="img" aria-label="${y}年${mo}月每天营业额">${g}</svg>`}
+function monthHtml(){const D=monthData(),{r,m,pm}=D,cur=S.rm===0;
+  const tp=topProds(m,5),tc=[...m.custMap.entries()].sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const pts=[];
+  if(m.n){pts.push(`营业额 ¥${fmt(m.sum)}，比上月${pctTxt(m.sum,pm.sum)}${cur?"（本月还没过完）":""}。`);
+    if(D.daily[D.best]>0)pts.push(`卖得最好的一天是 ${r.m}月${D.best+1}日（周${WDN[new Date(r.y,r.m-1,D.best+1).getDay()]}），¥${fmt(D.daily[D.best])}。`);
+    pts.push(`来了 ${m.cust} 位客户，新客 ${m.fresh} 位、老客 ${m.cust-m.fresh} 位${m.cust?`，老客占 ${Math.round((m.cust-m.fresh)/m.cust*100)}%`:""}。`);
+    if(D.buy)pts.push(`本月进货约 ¥${fmt(Math.round(D.buy))}，营业额是进货的 ${fmt(Math.round(m.sum/D.buy*10)/10)} 倍。`);
+    if(D.loss)pts.push(`报损 / 非销售出库约 ¥${fmt(Math.round(D.loss))}，可以看看哪些货在浪费。`);
+    if(m.pend)pts.push(`<span class="pend">有 ${m.pend} 笔还没填售价，营业额和利润偏少。</span>`)}
+  return `<section class="biz-card" id="bizReport"><div class="biz-h"><h2>月度经营报告</h2><span class="mnav"><button type="button" data-rm="-1" aria-label="上个月">‹</button><b>${r.label}</b><button type="button" data-rm="1" aria-label="下个月" ${cur?"disabled":""}>›</button></span>
+    <div class="actions"><button class="btn" type="button" id="copyMonth">复制报告</button><button class="btn" type="button" id="printMonth">打印 / 存 PDF</button></div></div>
+  <div class="stats six"><div class="stat"><b>¥${fmt(m.sum)}</b><span>营业额</span><small>比上月 ${pctHtml(m.sum,pm.sum)}</small></div>
+    <div class="stat"><b>${pfHtml(m.pf)}</b><span>利润</span><small>比上月 ${pctHtml(m.pf,pm.pf)}${m.miss?` · ${m.miss} 笔缺成本`:""}</small></div>
+    <div class="stat"><b>${m.n}</b><span>单数</span><small>比上月 ${pctHtml(m.n,pm.n)}</small></div>
+    <div class="stat"><b>¥${fmt(Math.round(m.avg*100)/100)}</b><span>客单价</span><small>上月 ¥${fmt(Math.round(pm.avg*100)/100)}</small></div>
+    <div class="stat"><b>${m.cust}</b><span>来客</span><small>新客 ${m.fresh} · 老客 ${m.cust-m.fresh}</small></div>
+    <div class="stat"><b>¥${fmt(Math.round(D.buy))}</b><span>进货（估算）</span><small>上月 ¥${fmt(Math.round(D.pbuy))}</small></div></div>
+  ${m.n?barsSvg(D.daily,D.best,r.y,r.m):""}
+  ${pts.length?`<div class="biz-box"><h3>本月小结</h3><ul>${pts.map(t=>`<li>${t}</li>`).join("")}</ul></div>`:`<p class="biz-note">${r.label}还没有消费记录。</p>`}
+  ${m.n?`<div class="biz-cols"><div class="biz-box"><h3>热销产品 TOP 5</h3>${tp.length?`<ol>${tp.map(([k,p])=>`<li>${esc(k)} <span class="muted">${p.n} 单 · ${fmt(p.q)}${esc(p.u)}</span></li>`).join("")}</ol>`:`<p class="muted">—</p>`}</div>
+    <div class="biz-box"><h3>消费最多的客户 TOP 5</h3>${tc.length?`<ol>${tc.map(([k,v])=>`<li>${esc(k)} <span class="muted">¥${fmt(v)}</span></li>`).join("")}</ol>`:`<p class="muted">—</p>`}</div></div>`:""}
+  </section>`}
+function monthText(){const D=monthData(),{r,m,pm}=D;const tp=topProds(m,5).map(([k,p])=>`${k}（${p.n}单）`).join("、");
+  return `【${r.label} 经营报告】\n营业额：¥${fmt(m.sum)}（比上月${pctTxt(m.sum,pm.sum)}）\n利润：¥${fmt(m.pf)}（比上月${pctTxt(m.pf,pm.pf)}）\n单数：${m.n} 单，客单价 ¥${fmt(Math.round(m.avg*100)/100)}\n来客：${m.cust} 位（新客 ${m.fresh}，老客 ${m.cust-m.fresh}）\n进货（估算）：¥${fmt(Math.round(D.buy))}`+(tp?`\n热销：${tp}`:"")+(D.daily[D.best]>0?`\n最好的一天：${r.m}月${D.best+1}日 ¥${fmt(D.daily[D.best])}`:"")}
+function bizCSV(){const D=monthData(),{r,m}=D;const rows=[[r.label+" 每日营业","营业额（元）","单数"]];
+  D.daily.forEach((v,i)=>rows.push([`${r.y}-${String(r.m).padStart(2,"0")}-${String(i+1).padStart(2,"0")}`,fmt(v),D.dn[i]]));
+  rows.push([]);rows.push(["合计",fmt(m.sum),m.n]);rows.push(["利润",fmt(m.pf)]);rows.push(["客单价",fmt(Math.round(m.avg*100)/100)]);rows.push(["来客",m.cust,"新客 "+m.fresh]);rows.push(["进货（估算）",fmt(Math.round(D.buy))]);
+  rows.push([]);rows.push(["热销产品","单数","数量"]);for(const [k,p] of topProds(m,20))rows.push([k,p.n,fmt(p.q)+p.u]);
+  return "﻿"+rows.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\n")}
+function copyText(t){const ok=()=>toast("已复制，可以直接粘贴到微信");
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(ok,()=>fallbackCopy(t));else fallbackCopy(t)}
+function fallbackCopy(t){const a=document.createElement("textarea");a.value=t;a.style.position="fixed";a.style.opacity="0";document.body.appendChild(a);a.select();try{document.execCommand("copy");toast("已复制")}catch(e){toast("复制失败")}a.remove()}
+function renderBiz(){if(!$("bizToday"))return;$("bizToday").innerHTML=todayHtml();$("bizMonth").innerHTML=monthHtml();
+  $("copyToday").onclick=()=>copyText(todayText());$("copyMonth").onclick=()=>copyText(monthText());
+  $("printMonth").onclick=()=>{document.body.classList.add("pbiz");setTimeout(()=>{window.print();document.body.classList.remove("pbiz")},50)};
+  $("bizMonth").querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{S.rm=Math.min(0,S.rm+(+b.dataset.rm));renderBiz()})}
+function renderExtra(){if(!S.loaded)return;if(S.tab==="sup")renderSup();if(S.tab==="biz")renderBiz()}
+document.addEventListener("click",e=>{
+  const sp=e.target.closest("[data-sup]");if(sp){supSheet(sp.dataset.sup);return}
+  if(e.target.closest("[data-newsup]")){newSupSheet();return}
+});
+window.addEventListener("afterprint",()=>document.body.classList.remove("pbiz"));
+
 renderCats();
 try{const raw=localStorage.getItem(KEY);if(raw){applyData(JSON.parse(raw))}else{examples();persist(true)}}
 catch(e){toast("浏览器禁止了本地存储，数据无法保存")}
 S.loaded=true;renderCats();
 $("sub").textContent="点品名编辑 · 入库/出库/盘点自动记录 · "+where();
 render();renderLog();renderCust();
-try{if(localStorage.getItem(KEY+"-tab")==="cust")setTab("cust")}catch(e){}
+try{const lt=localStorage.getItem(KEY+"-tab");if(lt&&lt!=="inv")setTab(lt)}catch(e){}
 window.addEventListener("storage",e=>{if(e.key===KEY&&e.newValue){applyData(JSON.parse(e.newValue));rerender()}});
 csInit();bkInit();
 </script>
