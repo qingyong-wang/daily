@@ -194,9 +194,50 @@ body.is-dragging,body.is-dragging *{cursor:grabbing!important;user-select:none;-
 .done .ck::after{content:"";position:absolute;left:6.5px;top:2.5px;width:5px;height:10px;border:solid var(--card);border-width:0 2px 2px 0;transform:rotate(45deg)}
 .txt{flex:1;min-width:0;overflow-wrap:anywhere;text-align:left;padding:2px 0;cursor:text}
 .done .txt{color:var(--muted);text-decoration:line-through}
-.streak{display:inline-block;margin-left:6px;padding:0 6px;border-radius:4px;font-size:11px;line-height:17px;color:var(--muted);background:var(--soft);vertical-align:2px;white-space:nowrap;font-variant-numeric:tabular-nums}
-.streak.hot{color:var(--red);background:none;border:1px solid currentColor;font-weight:600}
-.done .streak{text-decoration:none}
+.rstreak{display:inline-block;margin-left:6px;padding:0 6px;border-radius:4px;font-size:11px;line-height:17px;color:var(--muted);background:var(--soft);vertical-align:2px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.rstreak.hot{color:var(--red);background:none;border:1px solid currentColor;font-weight:600}
+.done .rstreak{text-decoration:none}
+/* ===== 习惯小花园 · 样式（整块可删）===== */
+.gd-ic{display:inline-block;margin-right:6px;font-size:16px;line-height:1;vertical-align:-1px;transform-origin:50% 90%;position:relative}
+.gd-ic.wilt{filter:grayscale(.7) sepia(.4);transform:rotate(-12deg);opacity:.75}
+.gd-ic.dead{filter:grayscale(1);opacity:.55}
+.gd-ic.gold,.gd-p .e.gold{filter:drop-shadow(0 0 4px #f5b301) drop-shadow(0 0 2px #ffd54a)}
+.gd-ic.pop{animation:gdPop .7s ease}
+.gd-plus{position:absolute;left:50%;top:-4px;font-size:11px;font-weight:700;color:var(--green);white-space:nowrap;pointer-events:none;animation:gdUp 1.1s ease forwards}
+.gd-plus i{font-style:normal;position:absolute;left:-14px;top:6px;font-size:12px}
+@keyframes gdPop{0%{transform:scale(1)}30%{transform:scale(1.6) translateY(-4px)}55%{transform:scale(.9)}75%{transform:scale(1.15)}100%{transform:scale(1)}}
+@keyframes gdUp{0%{opacity:0;transform:translate(-50%,4px)}20%{opacity:1}100%{opacity:0;transform:translate(-50%,-22px)}}
+.garden{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.gd-top{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap}
+.gd-w{font-size:12.5px;color:var(--muted)}
+.gd-top .hb-fold{margin-left:auto}
+.gd-lawn{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;padding:12px;border-radius:10px;background:linear-gradient(180deg,#e7f3ff 0,#f4faf5 38%,#e3f1e4 100%)}
+.gd-lawn.cloud{background:linear-gradient(180deg,#e9ecef 0,#f3f5f3 40%,#e6ece6 100%)}
+.gd-p{background:rgba(255,255,255,.75);border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;min-width:0}
+.gd-p .e{font-size:34px;line-height:1.15;background:none;border:0;cursor:pointer;padding:0;transform-origin:50% 90%}
+.gd-p .e.s0{font-size:24px}.gd-p .e.s1{font-size:27px}.gd-p .e.s2{font-size:31px}.gd-p .e.s4{font-size:38px}.gd-p .e.s5{font-size:44px}
+.gd-p .e.wilt{filter:grayscale(.7) sepia(.4);transform:rotate(-14deg);opacity:.75}
+.gd-p .e.dead{filter:grayscale(1);opacity:.5}
+.gd-p .nm{font-weight:600;font-size:13.5px;overflow-wrap:anywhere}
+.gd-p .sg{font-size:12px;color:var(--muted)}
+.gd-p .nx{font-size:12px;color:var(--green)}
+.gd-p .nx.bad{color:var(--red)}
+.gd-p .mk{margin-top:4px;font-size:12px;padding:3px 10px;border:1px solid var(--green);color:var(--green);border-radius:999px;background:#fff}
+.gd-p.ended{opacity:.6}
+.gd-fr{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--muted);align-items:center}
+.gd-fr b{color:var(--ink);font-weight:600}
+.gd-fr span{white-space:nowrap}
+.gd-cele{position:fixed;inset:0;z-index:99;display:flex;align-items:center;justify-content:center;background:rgba(20,30,25,.35);overflow:hidden;cursor:pointer;animation:gdFade .25s ease}
+.gd-cele .box{background:var(--card);border-radius:16px;padding:22px 28px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.2);animation:gdPop .6s ease}
+.gd-cele .big{font-size:64px;line-height:1.1}
+.gd-cele .t1{font-size:18px;font-weight:700;margin-top:6px}
+.gd-cele .t2{font-size:13px;color:var(--muted);margin-top:4px}
+.gd-cf{position:absolute;top:-30px;font-size:20px;animation:gdFall linear forwards}
+@keyframes gdFall{to{transform:translateY(110vh) rotate(540deg)}}
+@keyframes gdFade{from{opacity:0}}
+.wrap.m .gd-lawn{grid-template-columns:repeat(2,1fr);padding:8px;gap:8px}
+@media (prefers-reduced-motion:reduce){.gd-ic.pop,.gd-plus,.gd-cf,.gd-cele .box{animation:none}}
+/* ===== 小花园样式结束 ===== */
 .tag{display:inline-block;margin-left:8px;padding:0 6px;border:1px solid var(--line);border-radius:4px;font-size:11px;line-height:17px;color:var(--muted);vertical-align:2px;white-space:nowrap}
 .edit{flex:1;min-width:0;border:0;border-bottom:1.5px solid var(--red);background:none;padding:2px 0;outline:none}
 .ops{display:flex;gap:2px;flex:none}
@@ -929,7 +970,7 @@ function itemHTML(kind,x,done,star,canUp,canDown){
     '<span class="grip'+(canUp||canDown?'':' none')+'" aria-hidden="true" title="按住拖动排序">⋮⋮</span>'+
     '<button class="ck" data-act="toggle"'+a+' aria-pressed="'+!!done+'" aria-label="'+(done?'标为未完成':'标为完成')+'"></button>'+
     (isEdit?'<input class="edit" id="edit-input" type="text" maxlength="200" value="'+esc(x.text)+'" aria-label="修改任务">'
-           :'<button class="txt" data-act="edit"'+a+' title="点击修改">'+esc(x.text)+(kind==='r'?'<span class="tag">每天</span>'+(function(n){return n?'<span class="streak'+(n>=7?' hot':'')+'" title="已连续打卡 '+n+' 天">🔥 连续 '+n+' 天</span>':''})(hbStreak(findRoutine(x.id)||x,ui.view)):'')+'</button>')+
+           :'<button class="txt" data-act="edit"'+a+' title="点击修改">'+(GARDEN&&kind==='r'&&findRoutine(x.id)?gdIconHTML(findRoutine(x.id),ui.view,ui.gpop===x.id):'')+esc(x.text)+(kind==='r'?'<span class="tag">每天</span>'+(function(n){return n?'<span class="rstreak'+(n>=7?' hot':'')+'" title="已连续打卡 '+n+' 天">🔥 连续 '+n+' 天</span>':''})(hbStreak(findRoutine(x.id)||x,ui.view)):'')+'</button>')+
     '<span class="ops">'+
     '<button class="op" data-act="up"'+a+' aria-label="上移" title="上移"'+(canUp?'':' style="visibility:hidden" tabindex="-1"')+'>↑</button>'+
     '<button class="op" data-act="down"'+a+' aria-label="下移" title="下移"'+(canDown?'':' style="visibility:hidden" tabindex="-1"')+'>↓</button>'+
@@ -1080,6 +1121,73 @@ function habitsHTML(){
   return h+'</section>';
 }
 
+/* ===== 习惯小花园（整块可删：删掉这一段、样式里的小花园段、以及带 GARDEN 的几处）===== */
+var GARDEN=true;
+var GD_SP=[['苹果树','🌸','🍎','🌳'],['橘子树','🌼','🍊','🌳'],['桃树','🌷','🍑','🌳'],['樱桃树','💮','🍒','🌳'],['葡萄','🪻','🍇','🍇'],['草莓','🌼','🍓','🍓'],['向日葵','🌻','🌻','🌻'],['椰子树','🌺','🥥','🌴']];
+var GD_ST=[[0,'种子'],[3,'发芽'],[7,'小苗'],[21,'开花'],[45,'结果'],[100,'大丰收']];
+function gdSp(r){
+  if(typeof r.plant==='number'&&GD_SP[r.plant])return r.plant;
+  var h=0,id=String(r.id);for(var i=0;i<id.length;i++)h=(h*31+id.charCodeAt(i))>>>0;
+  return h%GD_SP.length;
+}
+function gdInfo(r,t){
+  var total=0;
+  Object.keys(state.days).forEach(function(d){if(d<=t&&hbActive(r,d)&&state.days[d].rdone&&state.days[d].rdone[r.id])total++});
+  var stage=0;for(var i=0;i<GD_ST.length;i++)if(total>=GD_ST[i][0])stage=i;
+  var ended=!hbActive(r,t), missed=0;
+  if(!ended&&!hbDone(r,t)){var d=addDays(t,-1);while(missed<7&&hbActive(r,d)&&!hbDone(r,d)){missed++;d=addDays(d,-1)}}
+  var mood=ended?'rest':missed>=7?'dead':missed>=1?'wilt':'ok';
+  var shown=mood==='dead'?Math.max(0,stage-1):stage;
+  var sp=GD_SP[gdSp(r)], cur=hbStreak(r,t);
+  return {total:total,stage:shown,real:stage,mood:mood,missed:missed,sp:sp,gold:cur>=30&&mood==='ok',cur:cur,ended:ended,
+    emoji:mood==='dead'?'🥀':['🌰','🌱','🌿',sp[1],sp[2],sp[3]][shown],
+    next:GD_ST[stage+1]?GD_ST[stage+1][0]-total:0, nextName:GD_ST[stage+1]?GD_ST[stage+1][1]:''};
+}
+function gdIconHTML(r,v,pop){
+  var g=gdInfo(r,v);
+  return '<span class="gd-ic'+(g.mood==='wilt'||g.mood==='dead'?' '+g.mood:'')+(g.gold?' gold':'')+(pop?' pop':'')+'" title="'+esc(g.sp[0]+' · '+GD_ST[g.stage][1]+' · 累计 '+g.total+' 天')+'">'+g.emoji+
+    (pop?'<span class="gd-plus"><i>💧</i>+1 天</span>':'')+'</span>';
+}
+function gdMkLeft(t){var k=weekStart(t);return 1-((state.gd&&state.gd.mk&&state.gd.mk[k])||0)}
+function gardenHTML(){
+  var open=fold.garden!==false, t=today();
+  var on=routinesOn(t), left=on.filter(function(r){return !hbDone(r,t)}).length;
+  var sunny=on.length&&!left;
+  var h='<section class="garden" aria-label="习惯小花园"><div class="gd-top"><span class="tr-t">小花园</span>'+
+    (on.length?'<span class="gd-w">'+(sunny?'☀️ 今天全部浇完水，出太阳了':'⛅ 还有 '+left+' 棵没浇水')+'</span>':'')+
+    '<button class="hb-fold" data-act="gd-fold" aria-expanded="'+open+'">'+(open?'收起':'展开')+'</button></div>';
+  if(!open)return h+'</section>';
+  if(!state.routines.length)return h+'<div class="empty">添加任务时勾选“每天重复”，就会在这里种下一棵植物。每天打卡就是给它浇水。</div></section>';
+  var rs=stableBy(state.routines.slice(),function(r){return hbActive(r,t)?0:1});
+  var mkLeft=gdMkLeft(t), y=addDays(t,-1);
+  h+='<div class="gd-lawn'+(sunny?'':' cloud')+'">';
+  var fruits=[];
+  rs.forEach(function(r){
+    var g=gdInfo(r,t);
+    if(g.real>=4)fruits.push([g,r]);
+    if(g.ended&&g.total===0)return;
+    var nx=g.ended?'已停止，留作纪念':g.mood==='dead'?'枯萎了，掉了一个阶段。今天浇水就重新长':g.mood==='wilt'?'蔫了（'+g.missed+' 天没浇水），今天打卡就恢复':
+      g.next?'再坚持 '+g.next+' 天'+g.nextName:'已经长到最大啦';
+    var canMk=g.mood==='wilt'&&mkLeft>0&&hbActive(r,y)&&!hbDone(r,y);
+    h+='<div class="gd-p'+(g.ended?' ended':'')+'"><button class="e s'+g.stage+(g.mood==='wilt'||g.mood==='dead'?' '+g.mood:'')+(g.gold?' gold':'')+'" data-act="gd-sp" data-r="'+esc(r.id)+'" title="'+esc(g.sp[0])+'（点一下换品种）">'+g.emoji+'</button>'+
+       '<span class="nm">'+esc(r.text)+'</span><span class="sg">'+(g.gold?'✨ 金色':'')+esc(g.sp[0])+' · '+GD_ST[g.stage][1]+' · 累计 '+g.total+' 天</span>'+
+       '<span class="nx'+(g.mood==='wilt'||g.mood==='dead'?' bad':'')+'">'+nx+'</span>'+
+       (canMk?'<button class="mk" data-act="gd-mk" data-r="'+esc(r.id)+'">补签昨天（本周还剩 '+mkLeft+' 次）</button>':'')+'</div>';
+  });
+  h+='</div>';
+  h+='<div class="gd-fr"><b>果实收藏</b>'+(fruits.length?fruits.map(function(p){return '<span>'+p[0].sp[2]+' '+esc(p[1].text)+' · '+p[0].total+' 天</span>'}).join(''):'<span>累计打卡 45 天结出第一颗果实</span>')+'</div>';
+  return h+'</section>';
+}
+function gdCelebrate(r,g){
+  var el=document.createElement('div'); el.className='gd-cele'; el.setAttribute('role','status');
+  var cf='';for(var i=0;i<26;i++)cf+='<span class="gd-cf" style="left:'+Math.round(Math.random()*100)+'%;animation-duration:'+(1.6+Math.random()*1.6).toFixed(2)+'s;animation-delay:'+(Math.random()*.5).toFixed(2)+'s">'+['🌸','✨','🍃','🎉','⭐'][i%5]+'</span>';
+  el.innerHTML=cf+'<div class="box"><div class="big">'+g.emoji+'</div><div class="t1">'+esc(r.text)+' '+GD_ST[g.stage][1]+'啦！</div><div class="t2">累计坚持了 '+g.total+' 天'+(g.next?'，再 '+g.next+' 天'+g.nextName:'')+'</div></div>';
+  var done=function(){if(el.parentNode)el.parentNode.removeChild(el)};
+  el.addEventListener('click',done); setTimeout(done,3500);
+  document.body.appendChild(el);
+}
+/* ===== 小花园结束 ===== */
+
 /* ---------- 手机端：720px 以下换成底部导航 + 分页布局 ---------- */
 var MQ=window.matchMedia?window.matchMedia('(max-width:720px)'):null;
 function isM(){return !!(MQ&&MQ.matches)}
@@ -1144,7 +1252,7 @@ function mobileHTML(){
   }else if(m==='plans'){
     h+='<h1 class="m-h">计划</h1>'+plansHTML(v);
   }else if(m==='stats'){
-    h+='<h1 class="m-h">统计</h1>'+trendHTML()+habitsHTML()+'<section class="mtools"><div class="mt-h"><span class="tr-t">数据</span>'+statusHTML()+'</div>'+toolsHTML()+'</section>';
+    h+='<h1 class="m-h">统计</h1>'+trendHTML()+(GARDEN?gardenHTML():'')+habitsHTML()+'<section class="mtools"><div class="mt-h"><span class="tr-t">数据</span>'+statusHTML()+'</div>'+toolsHTML()+'</section>';
   }else{
     if(ui.nEdit){
       h+='<div class="m-back"><button data-act="n-back">‹ 全部习惯</button></div>'+notesViewHTML();
@@ -1175,7 +1283,7 @@ function render(){
      '<div class="prog"><div class="prog-row"><span>已完成</span><b>'+c.done+' / '+c.total+'</b></div>'+
      '<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+pct+'"><span style="width:'+pct+'%"></span></div>'+
      '<div class="streak">'+(st>0?'已连续 '+st+' 天全部完成':'当天全部做完就开始计连续天数')+'</div></div><button class="tonotes" data-act="notes">同步到备忘录</button></div>';
-  h+=weekHTML(v)+toolsHTML()+'</aside><section class="work">'+workHTML(v)+'</section></div>'+trendHTML()+habitsHTML();
+  h+=weekHTML(v)+toolsHTML()+'</aside><section class="work">'+workHTML(v)+'</section></div>'+trendHTML()+(GARDEN?gardenHTML():'')+habitsHTML();
   }
   h+='</div>';
   }
@@ -1369,6 +1477,15 @@ root.addEventListener('click',function(ev){
   else if(act==='p-shift'){var sn=+b.dataset.n;POFF[b.dataset.pk]=sn?POFF[b.dataset.pk]+sn:0;editing=null;render()}
   else if(act==='trend'){ui.trend=+b.dataset.n;render()}
   else if(act==='tr-fold'){fold.trend=fold.trend===false;saveFold();render()}
+  else if(act==='gd-fold'){fold.garden=fold.garden===false;saveFold();render()}
+  else if(act==='gd-sp'){var pr=findRoutine(b.dataset.r);if(pr){pr.plant=(gdSp(pr)+1)%GD_SP.length;commit();toast('换成了'+GD_SP[pr.plant][0])}}
+  else if(act==='gd-mk'){
+    var mr=findRoutine(b.dataset.r), mt=today(), my=addDays(mt,-1);
+    if(mr&&gdMkLeft(mt)>0&&hbActive(mr,my)&&!hbDone(mr,my)){
+      state.gd=state.gd||{};state.gd.mk=state.gd.mk||{};var wk=weekStart(mt);state.gd.mk[wk]=(state.gd.mk[wk]||0)+1;
+      dayW(my).rdone[mr.id]=true;commit();toast('已补签昨天，这周的补签用完了');
+    }
+  }
   else if(act==='hb-fold'){fold.habits=fold.habits===false;saveFold();render()}
   else if(act==='hb-go'){
     var hk=b.dataset.r+'|'+b.dataset.d;
@@ -1400,9 +1517,12 @@ root.addEventListener('click',function(ev){
   else if(act==='cs-out'){csSignOut()}
   else if(act==='toggle'){
     ui.focus=false;
+    var gr=GARDEN&&kind==='r'&&findRoutine(id), g0=gr&&gdInfo(gr,v);
     if(kind==='r'){var D=dayW(v);if(D.rdone[id])delete D.rdone[id];else D.rdone[id]=true}
     else{var x=findTask(id);if(!x)return;x.done=!x.done}
+    if(gr&&D.rdone[id]){ui.gpop=id;setTimeout(function(){if(ui.gpop===id)ui.gpop=null},1200)}
     commit();
+    if(gr&&D.rdone[id]){var g1=gdInfo(gr,v);if(g1.stage>g0.stage&&g1.mood!=='dead')gdCelebrate(gr,g1)}
   }
   else if(act==='up'||act==='down'){moveItem(kind,id,act==='up'?-1:1)}
   else if(act==='star'){
