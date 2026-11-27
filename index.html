@@ -264,6 +264,9 @@ body.is-dragging,body.is-dragging *{cursor:grabbing!important;user-select:none;-
 .wrap.m .gd-lawn{grid-template-columns:1fr}
 .wrap.m .gd-path ol{grid-template-columns:1fr 1fr}
 @media (prefers-reduced-motion:reduce){.gd-ic.pop,.gd-plus,.gd-cele .seal{animation:none}}
+.seal.reset{opacity:.6;border-style:dashed}
+.gd-ic.reset{opacity:.6;border-style:dashed}
+.gd-best{font-size:11.5px;color:var(--muted)}
 /* ===== 等级样式结束 ===== */
 .tag{display:inline-block;margin-left:8px;padding:0 6px;border:1px solid var(--line);border-radius:4px;font-size:11px;line-height:17px;color:var(--muted);vertical-align:2px;white-space:nowrap}
 .edit{flex:1;min-width:0;border:0;border-bottom:1.5px solid var(--red);background:none;padding:2px 0;outline:none}
@@ -1168,52 +1171,50 @@ var GD_ST=[
 ];
 var GD_ZJ=9; /* 百炼成钢（100 天）在表里的位置 */
 function gdInfo(r,t){
-  var total=0;
-  Object.keys(state.days).forEach(function(d){if(d<=t&&hbActive(r,d)&&state.days[d].rdone&&state.days[d].rdone[r.id])total++});
-  var stage=0;for(var i=0;i<GD_ST.length;i++)if(total>=GD_ST[i][0])stage=i;
-  var ended=!hbActive(r,t), missed=0;
-  if(!ended&&!hbDone(r,t)){var d=addDays(t,-1);while(missed<7&&hbActive(r,d)&&!hbDone(r,d)){missed++;d=addDays(d,-1)}}
-  var mood=ended?'rest':missed>=7?'dead':missed>=1?'wilt':'ok';
-  var shown=mood==='dead'?Math.max(0,stage-1):stage, cur=hbStreak(r,t), N=GD_ST[stage+1];
-  var lo=GD_ST[stage][0], pct=N?Math.round((total-lo)/(N[0]-lo)*100):100;
-  return {total:total,stage:shown,real:stage,mood:mood,missed:missed,cur:cur,ended:ended,focus:cur>=30&&mood==='ok',
-    name:GD_ST[shown][1],quote:GD_ST[shown][2],tier:GD_ST[shown][3],
-    next:N?N[0]-total:0,nextName:N?N[1]:'',pct:pct};
+  /* 等级只看连续天数：今天没打卡不算断，整整一天没打卡就清零 */
+  var ds=Object.keys(state.days).filter(function(d){return d<=t&&hbActive(r,d)&&state.days[d].rdone&&state.days[d].rdone[r.id]}).sort();
+  var best=0, run=0, prev='';
+  ds.forEach(function(d){run=(prev&&addDays(prev,1)===d)?run+1:1;if(run>best)best=run;prev=d});
+  var lastRun=run, total=ds.length, ended=!hbActive(r,t), cur=hbStreak(r,t);
+  var broken=!ended&&cur===0&&total>0;
+  var lv=function(n){var k=0;for(var i=0;i<GD_ST.length;i++)if(n>=GD_ST[i][0])k=i;return k};
+  var stage=lv(cur), N=GD_ST[stage+1], lo=GD_ST[stage][0];
+  return {total:total,cur:cur,best:best,bestStage:lv(best),lastRun:lastRun,stage:stage,real:stage,ended:ended,
+    mood:ended?'rest':broken?'reset':'ok',focus:cur>=30&&!ended,
+    name:GD_ST[stage][1],quote:broken?'跌倒了就站起来，今天就是新的第 1 天。':GD_ST[stage][2],tier:GD_ST[stage][3],
+    next:N?N[0]-cur:0,nextName:N?N[1]:'',pct:N?Math.round((cur-lo)/(N[0]-lo)*100):100};
 }
-function gdCls(g){return ' t'+g.tier+(g.mood==='wilt'||g.mood==='dead'?' '+g.mood:'')+(g.focus?' focus':'')}
+function gdCls(g){return ' t'+g.tier+(g.mood==='reset'?' reset':'')+(g.focus?' focus':'')}
 function gdIconHTML(r,v,pop){
   var g=gdInfo(r,v);
-  return '<span class="gd-ic'+gdCls(g)+(pop?' pop':'')+'" title="'+esc('等级：'+g.name+' · 累计 '+g.total+' 天'+(g.next?' · 距「'+g.nextName+'」还差 '+g.next+' 天':''))+'">'+g.name+
+  return '<span class="gd-ic'+gdCls(g)+(pop?' pop':'')+'" title="'+esc('等级：'+g.name+' · 连续 '+g.cur+' 天'+(g.next?' · 距「'+g.nextName+'」还差 '+g.next+' 天':''))+'">'+g.name+
     (pop?'<span class="gd-plus">+1 天</span>':'')+'</span>';
 }
-function gdMkLeft(t){var k=weekStart(t);return 1-((state.gd&&state.gd.mk&&state.gd.mk[k])||0)}
 function gardenHTML(){
   var open=fold.garden!==false, t=today();
   var on=routinesOn(t), left=on.filter(function(r){return !hbDone(r,t)}).length;
   var h='<section class="garden" aria-label="坚持之路"><div class="gd-top"><span class="tr-t">坚持之路</span>'+
-    (on.length?'<span class="gd-w'+(left?'':' ok')+'">'+(left?'今天还有 '+left+' 个习惯没打卡':'今天的习惯全部打完了，干得漂亮')+'</span>':'')+
+    (on.length?'<span class="gd-w'+(left?'':' ok')+'">'+(left?'今天还有 '+left+' 个习惯没打卡，断了就要从头来':'今天的习惯全部打完了，干得漂亮')+'</span>':'')+
     '<button class="hb-fold" data-act="gd-fold" aria-expanded="'+open+'">'+(open?'收起':'展开')+'</button></div>';
   if(!open)return h+'</section>';
-  if(!state.routines.length)return h+'<div class="empty">添加任务时勾选“每天重复”，每天打卡，等级一步步往上升，一百天百炼成钢。</div></section>';
-  var rs=stableBy(state.routines.slice(),function(r){return hbActive(r,t)?0:1});
-  var mkLeft=gdMkLeft(t), y=addDays(t,-1), top=[];
+  if(!state.routines.length)return h+'<div class="empty">添加任务时勾选“每天重复”，就开始计连续天数。连续一百天百炼成钢，断一天就从头开始。</div></section>';
+  var rs=stableBy(state.routines.slice(),function(r){return hbActive(r,t)?0:1}), top=[];
   h+='<div class="gd-lawn">';
   rs.forEach(function(r){
     var g=gdInfo(r,t);
-    if(g.real>=GD_ZJ)top.push([g,r]);
+    if(g.best>=GD_ST[GD_ZJ][0])top.push([g,r]);
     if(g.ended&&g.total===0)return;
-    var nx=g.ended?'已停止，成绩保留':g.mood==='dead'?g.missed+' 天以上没打卡，退回一级。今天接上，重新往上冲':g.mood==='wilt'?'状态下滑：'+g.missed+' 天没打卡，今天打卡就能稳住':
-      g.next?'距「'+g.nextName+'」还差 '+g.next+' 天':'已经到最高等级';
-    var canMk=g.mood==='wilt'&&mkLeft>0&&hbActive(r,y)&&!hbDone(r,y);
+    var nx=g.ended?'已停止，纪录保留':g.mood==='reset'?'断了，从头再来。上一次坚持了 '+g.lastRun+' 天':
+      (g.next?'再连续 '+g.next+' 天升到「'+g.nextName+'」':'已经到最高等级')+(hbDone(r,t)?'':'（今天还没打卡）');
     h+='<div class="gd-p'+(g.ended?' ended':'')+(g.focus?' focus':'')+'"><div class="gd-row"><span class="seal'+gdCls(g)+'">'+g.name+'</span>'+
-       '<span class="gd-nm"><b>'+esc(r.text)+'</b><span>累计 '+g.total+' 天 · 连续 '+g.cur+' 天'+(g.focus?' <i class="gd-tag">心无旁骛</i>':'')+'</span></span></div>'+
+       '<span class="gd-nm"><b>'+esc(r.text)+'</b><span>连续 '+g.cur+' 天'+(g.focus?' <i class="gd-tag">心无旁骛</i>':'')+'</span></span></div>'+
        (g.ended?'':'<div class="gd-bar" aria-hidden="true"><i style="width:'+g.pct+'%"></i></div>')+
-       '<span class="nx'+(g.mood==='wilt'||g.mood==='dead'?' bad':'')+'">'+nx+'</span>'+
+       '<span class="nx'+(g.mood==='reset'?' bad':'')+'">'+nx+'</span>'+
        '<div class="gd-q">'+g.quote+'</div>'+
-       (canMk?'<button class="mk" data-act="gd-mk" data-r="'+esc(r.id)+'">补签昨天（本周还剩 '+mkLeft+' 次）</button>':'')+'</div>';
+       (g.best?'<span class="gd-best">最长纪录：连续 '+g.best+' 天 · '+GD_ST[g.bestStage][1]+'</span>':'')+'</div>';
   });
   h+='</div>';
-  h+='<div class="gd-fr"><b>百日榜</b>'+(top.length?top.map(function(p){return '<span>'+esc(p[1].text)+' · '+GD_ST[p[0].real][1]+' · '+p[0].total+' 天</span>'}).join(''):'<span>累计 100 天百炼成钢，上榜留名</span>')+'</div>';
+  h+='<div class="gd-fr"><b>百日榜</b>'+(top.length?top.map(function(p){return '<span>'+esc(p[1].text)+' · 最长连续 '+p[0].best+' 天</span>'}).join(''):'<span>连续 100 天百炼成钢，上榜留名</span>')+'</div>';
   h+=gdPathHTML(rs,t);
   return h+'</section>';
 }
@@ -1221,21 +1222,21 @@ function gardenHTML(){
 function gdPathHTML(rs,t){
   var at={};
   rs.forEach(function(r){if(!hbActive(r,t))return;var g=gdInfo(r,t);(at[g.stage]=at[g.stage]||[]).push(r.text)});
-  var h='<div class="gd-path"><div class="gd-path-h"><b>成长轨迹</b><span>按累计打卡天数升级，100 天百炼成钢</span></div><ol>';
+  var h='<div class="gd-path"><div class="gd-path-h"><b>成长轨迹</b><span>按连续打卡天数升级，断一天就从头开始</span></div><ol>';
   GD_ST.forEach(function(st,i){
     if(i===0)return;
     var who=at[i]||[];
     h+='<li class="'+(who.length?'on':'')+'"><span class="seal t'+st[3]+'">'+st[1]+'</span><div><span class="pn">'+st[1]+'<em>'+st[0]+' 天</em></span><span class="pt">'+st[2]+'</span>'+
        (who.length?'<span class="pw">'+who.map(esc).join('、')+'</span>':'')+'</div></li>';
   });
-  h+='</ol><div class="gd-path-x"><span>连续 30 天不断：心无旁骛（金光）</span><span>1 天没打卡：状态下滑，当天打卡就稳住</span><span>7 天没打卡：退回一级，累计天数不清零</span><span>每周 1 次补签昨天</span></div></div>';
+  h+='</ol><div class="gd-path-x"><span>连续 30 天：心无旁骛（金光）</span><span>今天还没打卡不算断，整整一天没打卡就清零</span><span>最长纪录永久保留</span></div></div>';
   return h;
 }
 function gdCelebrate(r,g,from){
   var el=document.createElement('div'); el.className='gd-cele'; el.setAttribute('role','status');
   el.innerHTML='<div class="box"><div class="k">升 级</div><span class="seal'+gdCls(g)+'">'+g.name+'</span>'+
     '<div class="c1">'+esc(r.text)+'　<s>'+from+' →</s> '+g.name+'</div><div class="gd-q">'+g.quote+'</div>'+
-    '<div class="c2">累计 '+g.total+' 天'+(g.next?'　·　下一级「'+g.nextName+'」还差 '+g.next+' 天':'')+'</div></div>';
+    '<div class="c2">连续 '+g.cur+' 天'+(g.next?'　·　下一级「'+g.nextName+'」还差 '+g.next+' 天':'')+'</div></div>';
   var done=function(){if(el.parentNode)el.parentNode.removeChild(el)};
   el.addEventListener('click',done); setTimeout(done,4500);
   document.body.appendChild(el);
@@ -1532,13 +1533,6 @@ root.addEventListener('click',function(ev){
   else if(act==='trend'){ui.trend=+b.dataset.n;render()}
   else if(act==='tr-fold'){fold.trend=fold.trend===false;saveFold();render()}
   else if(act==='gd-fold'){fold.garden=fold.garden===false;saveFold();render()}
-  else if(act==='gd-mk'){
-    var mr=findRoutine(b.dataset.r), mt=today(), my=addDays(mt,-1);
-    if(mr&&gdMkLeft(mt)>0&&hbActive(mr,my)&&!hbDone(mr,my)){
-      state.gd=state.gd||{};state.gd.mk=state.gd.mk||{};var wk=weekStart(mt);state.gd.mk[wk]=(state.gd.mk[wk]||0)+1;
-      dayW(my).rdone[mr.id]=true;commit();toast('已补签昨天，这周的补签用完了');
-    }
-  }
   else if(act==='hb-fold'){fold.habits=fold.habits===false;saveFold();render()}
   else if(act==='hb-go'){
     var hk=b.dataset.r+'|'+b.dataset.d;
