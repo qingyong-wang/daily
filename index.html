@@ -198,12 +198,13 @@ body.is-dragging,body.is-dragging *{cursor:grabbing!important;user-select:none;-
 .rstreak.hot{color:var(--red);background:none;border:1px solid currentColor;font-weight:600}
 .done .rstreak{text-decoration:none}
 /* ===== 习惯等级 · 样式（整块可删）===== */
-.gd-ic{display:inline-flex;align-items:center;justify-content:center;margin-right:7px;padding:0 4px;height:18px;border:1.5px solid currentColor;border-radius:3px;font-family:"Songti SC","STSong",serif;font-weight:700;font-size:11px;letter-spacing:1px;vertical-align:1px;position:relative;white-space:nowrap}
+.gd-ic{display:inline-flex;align-items:center;justify-content:center;margin-left:6px;padding:0 4px;height:18px;box-sizing:border-box;border:1.5px solid currentColor;border-radius:3px;font-family:"Songti SC","STSong",serif;font-weight:700;font-size:11px;letter-spacing:1px;vertical-align:1px;position:relative;white-space:nowrap}
 .gd-ic.t0{color:#9aa49f}.gd-ic.t1{color:#55635c}.gd-ic.t2{color:var(--green)}.gd-ic.t3{color:var(--red)}
 .gd-ic.t4,.gd-ic.focus{color:#b8860b;box-shadow:0 0 6px rgba(218,165,32,.45)}
 .gd-ic.wilt{opacity:.55;border-style:dashed}
 .gd-ic.dead{opacity:.45;border-style:dotted}
 .gd-ic.pop{animation:gdStamp .6s ease}
+.gd-ic .gd-n{letter-spacing:0;font-weight:600;font-variant-numeric:tabular-nums}
 .gd-plus{position:absolute;left:50%;top:-6px;font-family:var(--body);font-size:11px;font-weight:700;color:var(--green);white-space:nowrap;pointer-events:none;letter-spacing:0;animation:gdUp 1.1s ease forwards}
 @keyframes gdStamp{0%{transform:scale(1)}25%{transform:scale(1.5) rotate(-6deg)}60%{transform:scale(.92)}100%{transform:scale(1)}}
 @keyframes gdUp{0%{opacity:0;transform:translate(-50%,4px)}20%{opacity:1}100%{opacity:0;transform:translate(-50%,-22px)}}
@@ -1000,7 +1001,7 @@ function itemHTML(kind,x,done,star,canUp,canDown){
     '<span class="grip'+(canUp||canDown?'':' none')+'" aria-hidden="true" title="按住拖动排序">⋮⋮</span>'+
     '<button class="ck" data-act="toggle"'+a+' aria-pressed="'+!!done+'" aria-label="'+(done?'标为未完成':'标为完成')+'"></button>'+
     (isEdit?'<input class="edit" id="edit-input" type="text" maxlength="200" value="'+esc(x.text)+'" aria-label="修改任务">'
-           :'<button class="txt" data-act="edit"'+a+' title="点击修改">'+(GARDEN&&kind==='r'&&findRoutine(x.id)?gdIconHTML(findRoutine(x.id),ui.view,ui.gpop===x.id):'')+esc(x.text)+(kind==='r'?'<span class="tag">每天</span>'+(function(n){return n?'<span class="rstreak'+(n>=7?' hot':'')+'" title="已连续打卡 '+n+' 天">🔥 连续 '+n+' 天</span>':''})(hbStreak(findRoutine(x.id)||x,ui.view)):'')+'</button>')+
+           :'<button class="txt" data-act="edit"'+a+' title="点击修改">'+esc(x.text)+(kind==='r'?(GARDEN&&findRoutine(x.id)?gdIconHTML(findRoutine(x.id),ui.view,ui.gpop===x.id):'')+(function(n){return n?'<span class="rstreak'+(n>=7?' hot':'')+'" title="已连续打卡 '+n+' 天">🔥 连续 '+n+' 天</span>':''})(hbStreak(findRoutine(x.id)||x,ui.view)):'')+'</button>')+
     '<span class="ops">'+
     '<button class="op" data-act="up"'+a+' aria-label="上移" title="上移"'+(canUp?'':' style="visibility:hidden" tabindex="-1"')+'>↑</button>'+
     '<button class="op" data-act="down"'+a+' aria-label="下移" title="下移"'+(canDown?'':' style="visibility:hidden" tabindex="-1"')+'>↓</button>'+
@@ -1187,7 +1188,7 @@ function gdInfo(r,t){
 function gdCls(g){return ' t'+g.tier+(g.mood==='reset'?' reset':'')+(g.focus?' focus':'')}
 function gdIconHTML(r,v,pop){
   var g=gdInfo(r,v);
-  return '<span class="gd-ic'+gdCls(g)+(pop?' pop':'')+'" title="'+esc('等级：'+g.name+' · 连续 '+g.cur+' 天'+(g.next?' · 距「'+g.nextName+'」还差 '+g.next+' 天':''))+'">'+g.name+
+  return '<span class="gd-ic'+gdCls(g)+(pop?' pop':'')+'" title="'+esc('等级：'+g.name+' · 连续 '+g.cur+' 天'+(g.next?' · 距「'+g.nextName+'」还差 '+g.next+' 天':''))+'">'+g.name+'<span class="gd-n">（'+g.cur+'天）</span>'+
     (pop?'<span class="gd-plus">+1 天</span>':'')+'</span>';
 }
 function gardenHTML(){
